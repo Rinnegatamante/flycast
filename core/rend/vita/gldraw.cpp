@@ -306,70 +306,6 @@ static void SortTriangles(int first, int count)
    }
 }
 
-void DrawSorted(bool multipass)
-{
-   //if any drawing commands, draw them
-	if (pidx_sort.size())
-   {
-      u32 count=pidx_sort.size();
-
-      {
-         //set some 'global' modes for all primitives
-
-         glcache.Enable(GL_STENCIL_TEST);
-         glcache.StencilFunc(GL_ALWAYS, 0, 0);
-         glcache.StencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
-
-         for (u32 p=0; p<count; p++)
-         {
-            const PolyParam* params = pidx_sort[p].ppid;
-            if (pidx_sort[p].count>2) //this actually happens for some games. No idea why ..
-            {
-               SetGPState<ListType_Translucent, true>(params);
-               glDrawElements(GL_TRIANGLES, pidx_sort[p].count, gl.index_type,
-            		 (GLvoid*)(gl.get_index_size() * pidx_sort[p].first));
-            }
-            params++;
-         }
-
-			if (multipass && settings.rend.TranslucentPolygonDepthMask)
-			{
-				// Write to the depth buffer now. The next render pass might need it. (Cosmic Smash)
-				glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-				glcache.Disable(GL_BLEND);
-
-				glcache.StencilMask(0);
-
-				// We use the modifier volumes shader because it's fast. We don't need textures, etc.
-				glcache.UseProgram(gl.modvol_shader.program);
-				glUniform1f(gl.modvol_shader.sp_ShaderColor, 1.f);
-
-				glcache.DepthFunc(GL_GEQUAL);
-				glcache.DepthMask(GL_TRUE);
-
-				for (u32 p = 0; p < count; p++)
-				{
-					const PolyParam* params = pidx_sort[p].ppid;
-					if (pidx_sort[p].count > 2 && !params->isp.ZWriteDis) {
-						// FIXME no clipping in modvol shader
-						//SetTileClip(gp->tileclip,true);
-
-						SetCull(params->isp.CullMode ^ gcflip);
-
-						glDrawElements(GL_TRIANGLES, pidx_sort[p].count, gl.index_type,
-							  (GLvoid*)(gl.get_index_size() * pidx_sort[p].first));
-					}
-				}
-				glcache.StencilMask(0xFF);
-				glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-			}
-
-      }
-      // Re-bind the previous index buffer for subsequent render passes
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gl.vbo.idxs);
-   }
-}
-
 //All pixels are in area 0 by default.
 //If inside an 'in' volume, they are in area 1
 //if inside an 'out' volume, they are in area 0
@@ -476,98 +412,6 @@ static void SetupMainVBO(void)
 	vglIndexPointerMapped(gIndices);
 }
 
-static void SetupModvolVBO(void)
-{
-	glBindBuffer(GL_ARRAY_BUFFER, gl.vbo.modvols);
-
-	//setup vertex buffers attrib pointers
-	glEnableVertexAttribArray(VERTEX_POS_ARRAY);
-	glVertexAttribPointer(VERTEX_POS_ARRAY, 3, GL_FLOAT, GL_FALSE, sizeof(float)*3, (void*)0);
-
-	glDisableVertexAttribArray(VERTEX_UV_ARRAY);
-	glDisableVertexAttribArray(VERTEX_COL_OFFS_ARRAY);
-	glDisableVertexAttribArray(VERTEX_COL_BASE_ARRAY);
-}
-
-static void DrawModVols(int first, int count)
-{
-   /* A bit of explanation:
-    * In theory it works like this: generate a 1-bit stencil for each polygon
-    * volume, and then AND or OR it against the overall 1-bit tile stencil at 
-    * the end of the volume. */
-
-   if (count == 0)
-      return;
-
-   SetupModvolVBO();
-
-	glcache.Disable(GL_BLEND);
-
-   glcache.UseProgram(gl.modvol_shader.program);
-   glUniform1f(gl.modvol_shader.sp_ShaderColor, 1 - FPU_SHAD_SCALE.scale_factor / 256.f);
-
-   glcache.Enable(GL_DEPTH_TEST);
-   glcache.DepthMask(GL_FALSE);
-   glcache.DepthFunc(GL_GREATER);
-
-	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-
-	ModifierVolumeParam* params = &pvrrc.global_param_mvo.head()[first];
-
-	int mod_base = -1;
-
-	for (u32 cmv = 0; cmv < count; cmv++)
-	{
-		ModifierVolumeParam& param = params[cmv];
-
-		if (param.count == 0)
-			continue;
-
-		u32 mv_mode = param.isp.DepthMode;
-
-		if (mod_base == -1)
-			mod_base = param.first;
-
-		if (!param.isp.VolumeLast && mv_mode > 0)
-			SetMVS_Mode(Or, param.isp);		// OR'ing (open volume or quad)
-		else
-			SetMVS_Mode(Xor, param.isp);	// XOR'ing (closed volume)
-		glDrawArrays(GL_TRIANGLES, param.first * 3, param.count * 3);
-
-		if (mv_mode == 1 || mv_mode == 2)
-		{
-			// Sum the area
-			SetMVS_Mode(mv_mode == 1 ? Inclusion : Exclusion, param.isp);
-			glDrawArrays(GL_TRIANGLES, mod_base * 3, (param.first + param.count - mod_base) * 3);
-			mod_base = -1;
-		}
-	}
-	//disable culling
-	SetCull(0);
-	//enable color writes
-	glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE);
-
-	//black out any stencil with '1'
-	glcache.Enable(GL_BLEND);
-	glcache.BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	glcache.Enable(GL_STENCIL_TEST);
-	glcache.StencilFunc(GL_EQUAL, 0x81, 0x81); //only pixels that are Modvol enabled, and in area 1
-
-	//clear the stencil result bit
-	glcache.StencilMask(0x3); /* write to LSB */
-	glcache.StencilOp(GL_ZERO, GL_ZERO, GL_ZERO);
-
-	//don't do depth testing
-	glcache.Disable(GL_DEPTH_TEST);
-
-	SetupMainVBO();
-	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
-
-   //restore states
-   glcache.Enable(GL_DEPTH_TEST);
-}
-
 void DrawStrips(void)
 {
    SetupMainVBO();
@@ -603,16 +447,8 @@ void DrawStrips(void)
       {
          if (current_pass.autosort)
          {
-				if (settings.pvr.Emulation.AlphaSortMode == 0)
-				{
-					SortTriangles(previous_pass.tr_count, current_pass.tr_count - previous_pass.tr_count);
-					DrawSorted(render_pass < pvrrc.render_passes.used() - 1);
-				}
-				else
-				{
-					SortPParams(previous_pass.tr_count, current_pass.tr_count - previous_pass.tr_count);
-					DrawList<ListType_Translucent, true>(pvrrc.global_param_tr, previous_pass.tr_count, current_pass.tr_count - previous_pass.tr_count );
-				}
+			SortPParams(previous_pass.tr_count, current_pass.tr_count - previous_pass.tr_count);
+			DrawList<ListType_Translucent, true>(pvrrc.global_param_tr, previous_pass.tr_count, current_pass.tr_count - previous_pass.tr_count );
          }
          else
              DrawList<ListType_Translucent, false>(pvrrc.global_param_tr, previous_pass.tr_count, current_pass.tr_count - previous_pass.tr_count);
