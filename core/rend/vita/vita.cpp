@@ -201,23 +201,6 @@ void main(
 }
 )";
 
-static const char* ModifierVolumeShader = 
-R"(/* Vertex input*/
-void main(
-	float4 coords : WPOS
-	uniform float sp_ShaderColor,
-	float4 out frag_clr : COLOR,
-	float out frag_depth : DEPTH
-	)
-{
-   float w = coords.w * 100000.0;
-   frag_depth = log2(1.0 + w) / 34.0;
-
-   frag_clr = float4(0.0, 0.0, 0.0, sp_ShaderColor);
-}
-)";
-
-
 int screen_width  = 640;
 int screen_height = 480;
 GLuint fogTextureId;
@@ -453,8 +436,6 @@ static void gl_delete_shaders()
 			glDeleteProgram(it.second.program);
 	}
 	gl.shaders.clear();
-	glDeleteProgram(gl.modvol_shader.program);
-	gl.modvol_shader.program = 0;
 }
 
 static void gl_term(void)
@@ -464,10 +445,8 @@ static void gl_term(void)
 	glcache.DeleteTextures(ARRAY_SIZE(lightgunTextureId), lightgunTextureId);
 	memset(lightgunTextureId, 0, sizeof(lightgunTextureId));
 
-	glDeleteBuffers(1, &gl.vbo.geometry);
-	glDeleteBuffers(1, &gl.vbo.modvols);
-	glDeleteBuffers(1, &gl.vbo.idxs);
-	glDeleteBuffers(1, &gl.vbo.idxs2);
+	free(gVertexBufferPtr);
+	free(gIndicesPtr);
 	glDeleteTextures(1, &fbTextureId);
 	fbTextureId = 0;
 	glDeleteTextures(1, &fogTextureId);
@@ -485,17 +464,6 @@ static bool gl_create_resources(void)
 	gIndices = gIndicesPtr;
 
 	findGLVersion();
-
-	char vshader[8192];
-	sprintf(vshader, VertexShaderSource);
-	char fshader[8192];
-	sprintf(fshader, ModifierVolumeShader);
-
-	gl.modvol_shader.program=gl_CompileAndLink(vshader, fshader);
-	gl.modvol_shader.scale          = glGetUniformLocation(gl.modvol_shader.program, "scale");
-	gl.modvol_shader.depth_scale          = glGetUniformLocation(gl.modvol_shader.program, "depth_scale");
-	gl.modvol_shader.extra_depth_scale = glGetUniformLocation(gl.modvol_shader.program, "extra_depth_scale");
-	gl.modvol_shader.sp_ShaderColor = glGetUniformLocation(gl.modvol_shader.program, "sp_ShaderColor");
 
 	return true;
 }
@@ -684,13 +652,6 @@ static bool RenderFrame(void)
       UpdateFogTexture((u8 *)FOG_TABLE, GL_TEXTURE1, gl.fog_image_format);
 	}
 
-	glcache.UseProgram(gl.modvol_shader.program);
-
-	glUniform4fv(gl.modvol_shader.scale, 1, ShaderUniforms.scale_coefs);
-	glUniform4fv(gl.modvol_shader.depth_scale, 1, ShaderUniforms.depth_coefs);
-
-	glUniform1f(gl.modvol_shader.extra_depth_scale, ShaderUniforms.extra_depth_scale);
-
 	ShaderUniforms.PT_ALPHA=(PT_ALPHA_REF&0xFF)/255.0f;
 
 	for (const auto& it : gl.shaders)
@@ -734,8 +695,6 @@ static bool RenderFrame(void)
 			die("7 is not valid");
 			break;
 		}
-		DEBUG_LOG(RENDERER, "RTT packmode=%d stride=%d - %d,%d -> %d,%d\n", FB_W_CTRL.fb_packmode, FB_W_LINESTRIDE.stride * 8,
- 				FB_X_CLIP.min, FB_Y_CLIP.min, FB_X_CLIP.max, FB_Y_CLIP.max);
 		BindRTT(FB_W_SOF1 & VRAM_MASK, dc_width, dc_height, channels,format);
 	}
    else
@@ -767,13 +726,6 @@ static bool RenderFrame(void)
 	  vtx_incr = pvrrc.verts.bytes() / sizeof(float);
 	  
       upload_vertex_indices();
-
-      //Modvol VBO
-      if (pvrrc.modtrig.used())
-      {
-         glBindBuffer(GL_ARRAY_BUFFER, gl.vbo.modvols); glCheck();
-         glBufferData(GL_ARRAY_BUFFER,pvrrc.modtrig.bytes(),pvrrc.modtrig.head(),GL_STREAM_DRAW); glCheck();
-      }
 
       //not all scaling affects pixel operations, scale to adjust for that
       scale_x *= scissoring_scale_x;
