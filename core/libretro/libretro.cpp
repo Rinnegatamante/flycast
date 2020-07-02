@@ -6,6 +6,11 @@
 #include <sys/time.h>
 #endif
 
+#ifdef VITA
+int _newlib_vm_size_user = 1024 * 1024;
+#include <vitasdk.h>
+#endif
+
 #ifdef HAVE_LIBNX
 #include <stdlib.h>
 #include <string.h>
