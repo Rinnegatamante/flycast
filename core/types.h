@@ -4,6 +4,11 @@
 #include "build.h"
 #include "log/Log.h"
 
+#ifndef PATH_MAX
+#define PATH_MAX 256
+#endif
+
+
 #ifdef HAVE_LIBNX
 #include <strings.h>
 #endif

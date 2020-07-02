@@ -1,6 +1,11 @@
 #include "arm7.h"
 #include "arm_mem.h"
 
+#ifdef VITA
+#include <vitasdk.h>
+extern int getVMBlock();
+#endif
+
 #define arm_printf(...) DEBUG_LOG(AICA_ARM, __VA_ARGS__)
 
 #define CPUReadMemoryQuick(addr) (*(u32*)&aica_ram[addr&ARAM_MASK])
@@ -595,11 +600,11 @@ extern const u32 ICacheSize=1024*1024;
 #ifdef _WIN32
 u8 ARM7_TCB[ICacheSize+4096];
 #elif defined(__linux__) || defined(HAVE_LIBNX)
-
 u8 ARM7_TCB[ICacheSize+4096] __attribute__((section(".text")));
-
 #elif defined(__MACH__)
 u8 ARM7_TCB[ICacheSize+4096] __attribute__((section("__TEXT, .text")));
+#elif defined(VITA)
+u8 *ARM7_TCB = nullptr;
 #else
 #error ARM7_TCB ALLOC
 #endif
@@ -1444,8 +1449,9 @@ naked void arm_exit()
  */
 
 //mprotect and stuff ..
-
+#ifndef VITA
 #include <sys/mman.h>
+#endif
 
 void  armEmit32(u32 emit32)
 {
@@ -2080,10 +2086,10 @@ void *armGetEmitPtr()
 void armt_init()
 {
 	InitHash();
-
+	#ifndef VITA
 	//align to next page ..
 	ICache = (u8*)(((unat)ARM7_TCB+4095)& ~4095);
-
+	
 	#ifdef __MACH__
 		//Can't just mprotect on iOS
 		munmap(ICache, ICacheSize);
@@ -2091,9 +2097,13 @@ void armt_init()
 	#endif
 
 	mem_region_set_exec(ICache, ICacheSize);
-
+	#endif
 #if TARGET_IPHONE
 	memset((u8*)mmap(ICache, ICacheSize, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_FIXED | MAP_PRIVATE | MAP_ANON, 0, 0),0xFF,ICacheSize);
+#elif defined(VITA)
+	SceUID vm_memblock = getVMBlock();
+	sceKernelGetMemBlockBase(vm_memblock, (void**)&ICache);
+	sceKernelOpenVMDomain();
 #else
 	memset(ICache,0xFF,ICacheSize);
 #endif

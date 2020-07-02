@@ -10,6 +10,10 @@
 #include <switch.h>
 #include <arpa/inet.h>
 #define SOL_TCP 6 // Shrug
+#elif defined(VITA)
+#include <vitasdk.h>
+#include <arpa/inet.h>
+#define SOL_TCP 6 // Shrug
 #else
 #include <netinet/ip.h>
 #endif // HAVE_LIBNX

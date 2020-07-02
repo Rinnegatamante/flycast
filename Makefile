@@ -279,6 +279,38 @@ else ifeq ($(platform), classic_armv8_a35)
 	HAVE_GENERIC_JIT = 0
 	CORE_DEFINES += -DLOW_END -DLOW_RES
 	
+	#########################################
+# (armv7 a9, hard point, neon based) ###
+# PlayStation Vita
+else ifeq ($(platform), vita)
+	PREFIX = arm-vita-eabi
+	CC = $(PREFIX)-gcc
+	CXX = $(PREFIX)-g++
+	AR  = $(PREFIX)-ar
+	EXT    ?= a
+	TARGET := $(TARGET_NAME)_libretro.$(EXT)
+	SHARED += -shared -Wl,--version-script=link.T
+	fpic = -fPIC
+	LIBS += -lrt
+	ARM_FLOAT_ABI_HARD = 1
+	HAVE_VITAGL = 1
+	FORCE_GLES = 1
+	SINGLE_PREC_FLAGS = 1
+	HAVE_LTCG = 0
+	HAVE_OPENMP = 0
+	CFLAGS += -Ofast -DVITA \
+	-fuse-linker-plugin \
+	-fno-stack-protector -fno-ident -fomit-frame-pointer \
+	-fmerge-all-constants -ffast-math -funroll-all-loops \
+	-marm -mcpu=cortex-a35 -mfpu=neon-fp-armv8 -mfloat-abi=hard
+	CXXFLAGS += $(CFLAGS)
+	ASFLAGS += $(CFLAGS)
+	LDFLAGS += -marm -mcpu=cortex-a9 -mfpu=neon -mfloat-abi=hard -Ofast
+	PLATFORM_EXT := unix
+	WITH_DYNAREC = arm
+	HAVE_GENERIC_JIT = 0
+	CORE_DEFINES += -DLOW_END -DLOW_RES
+	
 #########################################
 
 # sun8i Allwinner H2+ / H3 for mainline Builds
