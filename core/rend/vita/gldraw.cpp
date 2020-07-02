@@ -483,11 +483,15 @@ void DrawFramebuffer(float w, float h)
  	glActiveTexture(GL_TEXTURE0);
 	glcache.BindTexture(GL_TEXTURE_2D, fbTextureId);
 
-   SetupMainVBO();
-   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STREAM_DRAW);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STREAM_DRAW);
+	gVertexBuffer += vtx_incr;
+	gIndices += idx_incr;
+	memcpy(gVertexBuffer, vertices, sizeof(vertices));
+	memcpy(gIndices, indices, sizeof(indices));
+	vtx_incr = sizeof(vertices) / sizeof(float);
+	idx_incr = sizeof(indices) / sizeof(uint16_t);
+	SetupMainVBO();
+	vglDrawObjects(GL_TRIANGLE_STRIP, 5, GL_FALSE);
 
-	glDrawElements(GL_TRIANGLE_STRIP, 5, GL_UNSIGNED_SHORT, (void *)0);
  	glcache.DeleteTextures(1, &fbTextureId);
 	fbTextureId = 0;
 }
@@ -602,7 +606,6 @@ void DrawVmuTexture(u8 vmu_screen_number, bool draw_additional_primitives)
 	glcache.Enable(GL_BLEND);
 	glcache.BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	SetupMainVBO();
 	PipelineShader *shader = GetProgram(0, 1, 1, 1, 0, 0, 0, 2, false, false, false, false);
 	glcache.UseProgram(shader->program);
 
@@ -615,17 +618,16 @@ void DrawVmuTexture(u8 vmu_screen_number, bool draw_additional_primitives)
 		};
 		GLushort indices[] = { 0, 1, 2, 1, 3 };
 
-		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STREAM_DRAW);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STREAM_DRAW);
+		gVertexBuffer += vtx_incr;
+		gIndices += idx_incr;
+		memcpy(gVertexBuffer, vertices, sizeof(vertices));
+		memcpy(gIndices, indices, sizeof(indices));
+		vtx_incr = sizeof(vertices) / sizeof(float);
+		idx_incr = sizeof(indices) / sizeof(uint16_t);
+		SetupMainVBO();
 	}
 
-	glDrawElements(GL_TRIANGLE_STRIP, 5, GL_UNSIGNED_SHORT, (void *)0);
-
-	if ( draw_additional_primitives )
-	{
-		glBufferData(GL_ARRAY_BUFFER, pvrrc.verts.bytes(), pvrrc.verts.head(), GL_STREAM_DRAW);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, pvrrc.idx.bytes(), pvrrc.idx.head(), GL_STREAM_DRAW);
-	}
+	vglDrawObjects(GL_TRIANGLE_STRIP, 5, GL_FALSE);
 }
 
 void UpdateLightGunTexture(int port)
@@ -702,7 +704,6 @@ void DrawGunCrosshair(u8 port, bool draw_additional_primitives)
 	glcache.Enable(GL_BLEND);
 	glcache.BlendFunc(GL_SRC_ALPHA, GL_ONE);
 
-	SetupMainVBO();
 	PipelineShader *shader = GetProgram(0, 1, 1, 1, 0, 0, 0, 2, false, false, false, false);
 	glcache.UseProgram(shader->program);
 
@@ -714,18 +715,18 @@ void DrawGunCrosshair(u8 port, bool draw_additional_primitives)
 				{ x+w, y,   1, { 255, 255, 255, 255 }, { 0, 0, 0, 0 }, 1, 0 },
 		};
 		GLushort indices[] = { 0, 1, 2, 1, 3 };
-
-		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STREAM_DRAW);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STREAM_DRAW);
+		
+		gVertexBuffer += vtx_incr;
+		gIndices += idx_incr;
+		memcpy(gVertexBuffer, vertices, sizeof(vertices));
+		memcpy(gIndices, indices, sizeof(indices));
+		vtx_incr = sizeof(vertices) / sizeof(float);
+		idx_incr = sizeof(indices) / sizeof(uint16_t);
+		SetupMainVBO();
 	}
 
-	glDrawElements(GL_TRIANGLE_STRIP, 5, GL_UNSIGNED_SHORT, (void *)0);
+	
+	vglDrawObjects(GL_TRIANGLE_STRIP, 5, GL_FALSE);
 
 	glcache.BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	if ( draw_additional_primitives )
-	{
-		glBufferData(GL_ARRAY_BUFFER, pvrrc.verts.bytes(), pvrrc.verts.head(), GL_STREAM_DRAW);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, pvrrc.idx.bytes(), pvrrc.idx.head(), GL_STREAM_DRAW);
-	}
 }
