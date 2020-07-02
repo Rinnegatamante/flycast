@@ -20,6 +20,13 @@
 #define GL_MINOR_VERSION                  0x821C
 #endif
 
+uint16_t *gIndices;
+float *gVertexBuffer;
+uint16_t *gIndicesPtr;
+float *gVertexBufferPtr;
+
+extern uint32_t idx_incr, vtx_incr;
+
 GLCache glcache;
 gl_ctx gl;
 
@@ -472,16 +479,16 @@ static void gl_term(void)
 static bool gl_create_resources(void)
 {
 	/* create VBOs */
-	glGenBuffers(1, &gl.vbo.geometry);
-	glGenBuffers(1, &gl.vbo.modvols);
-	glGenBuffers(1, &gl.vbo.idxs);
-	glGenBuffers(1, &gl.vbo.idxs2);
+	gVertexBufferPtr = (float*)malloc(0x1800000);
+	gIndicesPtr = (uint16_t*)malloc(0x600000);
+	gVertexBuffer = gVertexBufferPtr;
+	gIndices = gIndicesPtr;
 
-   findGLVersion();
+	findGLVersion();
 
-   char vshader[8192];
-   sprintf(vshader, VertexShaderSource);
-   char fshader[8192];
+	char vshader[8192];
+	sprintf(vshader, VertexShaderSource);
+	char fshader[8192];
 	sprintf(fshader, ModifierVolumeShader);
 
 	gl.modvol_shader.program=gl_CompileAndLink(vshader, fshader);
@@ -530,19 +537,16 @@ void DoCleanup() {
 
 static void upload_vertex_indices()
 {
-	if (gl.index_type == GL_UNSIGNED_SHORT)
-	{
-		static bool overrun;
-		static List<u16> short_idx;
-		if (short_idx.daty != NULL)
-			short_idx.Free();
-		short_idx.Init(pvrrc.idx.used(), &overrun, NULL);
-		for (u32 *p = pvrrc.idx.head(); p < pvrrc.idx.LastPtr(0); p++)
-			*(short_idx.Append()) = *p;
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, short_idx.bytes(), short_idx.head(), GL_STREAM_DRAW);
-	}
-	else
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER,pvrrc.idx.bytes(),pvrrc.idx.head(),GL_STREAM_DRAW);
+	gIndices += idx_incr;
+	static bool overrun;
+	static List<u16> short_idx;
+	if (short_idx.daty != NULL)
+		short_idx.Free();
+	short_idx.Init(pvrrc.idx.used(), &overrun, NULL);
+	for (u32 *p = pvrrc.idx.head(); p < pvrrc.idx.LastPtr(0); p++)
+		*(short_idx.Append()) = *p;
+	memcpy(gIndices, short_idx.head(), short_idx.bytes());
+	idx_incr = short_idx.bytes() / sizeof(uint16_t);
 }
 
 static bool RenderFrame(void)
@@ -758,12 +762,10 @@ static bool RenderFrame(void)
 
    if (!pvrrc.isRenderFramebuffer)
    {
-      //Main VBO
-      glBindBuffer(GL_ARRAY_BUFFER, gl.vbo.geometry); glCheck();
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gl.vbo.idxs); glCheck();
-
-      glBufferData(GL_ARRAY_BUFFER,pvrrc.verts.bytes(),pvrrc.verts.head(),GL_STREAM_DRAW); glCheck();
-
+	  gVertexBuffer += vtx_incr;
+	  memcpy(gVertexBuffer, pvrrc.verts.head(), pvrrc.verts.bytes());
+	  vtx_incr = pvrrc.verts.bytes() / sizeof(float);
+	  
       upload_vertex_indices();
 
       //Modvol VBO

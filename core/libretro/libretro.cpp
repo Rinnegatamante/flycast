@@ -7,6 +7,10 @@
 #endif
 
 #ifdef VITA
+extern uint16_t *gIndices;
+extern float *gVertexBuffer;
+extern uint16_t *gIndicesPtr;
+extern float *gVertexBufferPtr;
 int _newlib_vm_size_user = 1024 * 1024;
 #include <vitasdk.h>
 #endif
@@ -1232,6 +1236,11 @@ void retro_run (void)
    if (!settings.rend.ThreadedRendering)
 #endif
 	   is_dupe = true;
+	   
+#ifdef VITA
+   gVertexBuffer = gVertexBufferPtr;
+   gIndices = gIndicesPtr;
+#endif 
 }
 
 void retro_reset (void)

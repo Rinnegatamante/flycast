@@ -2,6 +2,13 @@
 #include "rend/rend.h"
 #include "rend/sorter.h"
 
+extern uint16_t *gIndices;
+extern float *gVertexBuffer;
+extern uint16_t *gIndicesPtr;
+extern float *gVertexBufferPtr;
+
+uint32_t idx_incr = 0, vtx_incr = 0;
+
 /*
 
 Drawing and related state management
@@ -263,8 +270,8 @@ static void DrawList(const List<PolyParam>& gply, int first, int count)
       if (params->count>2) /* this actually happens for some games. No idea why .. */
       {
          SetGPState<Type,SortingEnabled>(params);
-         glDrawElements(GL_TRIANGLE_STRIP, params->count, gl.index_type,
-         					(GLvoid*)(gl.get_index_size() * params->first));
+		 vglIndexPointerMapped(gIndices + params->first);
+		 vglDrawObjects(GL_TRIANGLE_STRIP, params->count, GL_FALSE);
       }
 
       params++;
@@ -462,21 +469,11 @@ void SetMVS_Mode(ModifierVolumeMode mv_mode, ISP_Modvol ispc)
 
 static void SetupMainVBO(void)
 {
-	glBindBuffer(GL_ARRAY_BUFFER, gl.vbo.geometry);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gl.vbo.idxs);
-
-	//setup vertex buffers attrib pointers
-	glEnableVertexAttribArray(VERTEX_POS_ARRAY);
-	glVertexAttribPointer(VERTEX_POS_ARRAY, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex,x));
-
-	glEnableVertexAttribArray(VERTEX_COL_BASE_ARRAY);
-	glVertexAttribPointer(VERTEX_COL_BASE_ARRAY, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), (void*)offsetof(Vertex,col));
-
-	glEnableVertexAttribArray(VERTEX_COL_OFFS_ARRAY);
-	glVertexAttribPointer(VERTEX_COL_OFFS_ARRAY, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), (void*)offsetof(Vertex,vtx_spc));
-
-	glEnableVertexAttribArray(VERTEX_UV_ARRAY);
-	glVertexAttribPointer(VERTEX_UV_ARRAY, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex,u));
+	vglVertexAttribPointerMapped(0, gVertexBuffer);
+	vglVertexAttribPointerMapped(1, gVertexBuffer);
+	vglVertexAttribPointerMapped(2, gVertexBuffer);
+	vglVertexAttribPointerMapped(3, gVertexBuffer);
+	vglIndexPointerMapped(gIndices);
 }
 
 static void SetupModvolVBO(void)
@@ -601,10 +598,6 @@ void DrawStrips(void)
       //Alpha tested
       DrawList<ListType_Punch_Through, false>(pvrrc.global_param_pt,
             previous_pass.pt_count, current_pass.pt_count - previous_pass.pt_count);
-
-      // Modifier volumes
-      if (gl.stencil_present && settings.rend.ModifierVolumes)
-    	 DrawModVols(previous_pass.mvo_count, current_pass.mvo_count - previous_pass.mvo_count);
 
       //Alpha blended
       {
