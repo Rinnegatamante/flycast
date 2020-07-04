@@ -291,8 +291,7 @@ else ifeq ($(platform), vita)
 	EXT    ?= a
 	TARGET := $(TARGET_NAME)_libretro.$(EXT)
 	SHARED += -shared -Wl,--version-script=link.T
-	fpic = -fPIC
-	LIBS += -lrt
+	fpic =
 	ARM_FLOAT_ABI_HARD = 1
 	HAVE_VITAGL = 1
 	FORCE_GLES = 1
@@ -307,7 +306,7 @@ else ifeq ($(platform), vita)
 	-marm -mcpu=cortex-a35 -mfpu=neon-fp-armv8 -mfloat-abi=hard
 	CXXFLAGS += $(CFLAGS)
 	ASFLAGS += $(CFLAGS)
-	LDFLAGS += -marm -mcpu=cortex-a9 -mfpu=neon -mfloat-abi=hard -Ofast
+	LDFLAGS += -marm -mcpu=cortex-a9 -mfpu=neon -mfloat-abi=hard -O2
 	PLATFORM_EXT := unix
 	WITH_DYNAREC = arm
 	HAVE_GENERIC_JIT = 0
@@ -896,7 +895,9 @@ ifeq ($(WITH_DYNAREC), mips)
 	HOST_CPU_FLAGS = -DHOST_CPU=$(HOST_CPU_MIPS)
 endif
 
-ifeq ($(FORCE_GLES),1)
+ifeq ($(platform),vita)
+	GL_LIB :=
+else ifeq ($(FORCE_GLES),1)
 	GLES = 1
 	GL_LIB := -lGLESv2
 else ifneq (,$(findstring gles,$(platform)))
@@ -1137,7 +1138,7 @@ endif
 
 ifeq ($(platform), vita)
 %.o: %.S
-	$(CC) $(ASFLAGS) $(INCFLAGS) $< -o $@
+	$(CC) $(ASFLAGS) -c $(INCFLAGS) $< -o $@
 else
 %.o: %.S
 	$(CC_AS) $(ASFLAGS) $(INCFLAGS) $< -o $@
