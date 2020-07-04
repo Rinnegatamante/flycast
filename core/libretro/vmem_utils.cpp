@@ -3,7 +3,9 @@
 // There's some minimal amount of platform specific hacks to support
 // Android and OSX since they are slightly different in some areas.
 
+#ifndef VITA
 #include <sys/mman.h>
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -398,6 +400,7 @@ bool vmem_platform_prepare_jit_block(void *code_area, unsigned size, void **code
 
 	return (ptr_rw != MAP_FAILED);
 }
+#endif
 
 // Some OSes restrict cache flushing, cause why not right? :D
 

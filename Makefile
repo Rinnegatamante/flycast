@@ -297,9 +297,10 @@ else ifeq ($(platform), vita)
 	FORCE_GLES = 1
 	SINGLE_PREC_FLAGS = 1
 	HAVE_LTCG = 0
+	NO_EXCEPTIONS = 1
 	HAVE_OPENMP = 0
-	CFLAGS += -Ofast -DVITA \
-	-fuse-linker-plugin \
+	CFLAGS += -O2 -DVITA \
+	-fuse-linker-plugin -ftree-vectorize \
 	-fno-stack-protector -fno-ident -fomit-frame-pointer \
 	-fmerge-all-constants -ffast-math -funroll-all-loops \
 	-marm -mcpu=cortex-a35 -mfpu=neon-fp-armv8 -mfloat-abi=hard
@@ -1114,8 +1115,13 @@ endif
 %.o: %.c
 	$(CC) $(INCFLAGS) $(CFLAGS) $(MFLAGS) $< -o $@
 
+ifeq ($(platform), vita)
+%.o: %.S
+	$(CC) $(ASFLAGS) $(INCFLAGS) $< -o $@
+else
 %.o: %.S
 	$(CC_AS) $(ASFLAGS) $(INCFLAGS) $< -o $@
+endif
 
 %.o: %.cc
 	$(CXX) $(INCFLAGS) $(CFLAGS) $(MFLAGS) $(CXXFLAGS) $< -o $@
