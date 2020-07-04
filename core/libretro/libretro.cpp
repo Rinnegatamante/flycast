@@ -43,7 +43,9 @@ char* strdup(const char *str)
 
 #include <libretro.h>
 
-#if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES)
+#ifdef VITA
+#include <vitaGL.h>
+#elif defined(HAVE_OPENGL) || defined(HAVE_OPENGLES)
 #include <glsm/glsm.h>
 #endif
 #ifdef HAVE_VULKAN
@@ -1224,15 +1226,16 @@ void retro_run (void)
 	   }
 
 	   poll_cb();
-
+#ifndef VITA
 	   if (settings.pvr.rend == 0 || settings.pvr.rend == 3)
 	   	glsm_ctl(GLSM_CTL_STATE_BIND, NULL);
-
+#endif
 	   // Render
 	   is_dupe = !rend_single_frame();
-
+#ifndef VITA
 	   if (settings.pvr.rend == 0 || settings.pvr.rend == 3)
 	   	glsm_ctl(GLSM_CTL_STATE_UNBIND, NULL);
+#endif
    }
    else
 #endif
@@ -1289,15 +1292,19 @@ static void context_reset(void)
 {
 	INFO_LOG(RENDERER, "context_reset.");
    gl_ctx_resetting = false;
+#ifndef VITA
    glsm_ctl(GLSM_CTL_STATE_CONTEXT_RESET, NULL);
    glsm_ctl(GLSM_CTL_STATE_SETUP, NULL);
+#endif
 }
 
 static void context_destroy(void)
 {
    gl_ctx_resetting = true;
    renderer_changed = true;
+#ifndef VITA
    glsm_ctl(GLSM_CTL_STATE_CONTEXT_DESTROY, NULL);
+#endif
 }
 #endif
 
@@ -1788,6 +1795,7 @@ static bool set_vulkan_hw_render()
 
 static bool set_opengl_hw_render(u32 preferred)
 {
+#ifndef VITA
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES)
 	glsm_ctx_params_t params = {0};
 
@@ -1847,6 +1855,9 @@ static bool set_opengl_hw_render(u32 preferred)
 	return glsm_ctl(GLSM_CTL_STATE_CONTEXT_INIT, &params);
 #else
 	return false;
+#endif
+#else
+	return true;
 #endif
 }
 
