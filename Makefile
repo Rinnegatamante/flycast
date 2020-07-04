@@ -289,23 +289,22 @@ else ifeq ($(platform), vita)
 	AR  = $(PREFIX)-ar
 	EXT    ?= a
 	TARGET := $(TARGET_NAME)_libretro.$(EXT)
-	SHARED += -shared -Wl,--version-script=link.T
+	SHARED += 
 	fpic =
 	ARM_FLOAT_ABI_HARD = 1
 	HAVE_VITAGL = 1
+	STATIC_LINKING = 1
 	FORCE_GLES = 1
 	SINGLE_PREC_FLAGS = 1
 	HAVE_LTCG = 0
 	NO_EXCEPTIONS = 1
 	HAVE_OPENMP = 0
-	CFLAGS += -O2 -DVITA \
-	-fuse-linker-plugin -ftree-vectorize \
-	-fno-stack-protector -fno-ident -fomit-frame-pointer \
-	-fmerge-all-constants -ffast-math -funroll-all-loops \
-	-marm -mcpu=cortex-a35 -mfpu=neon-fp-armv8 -mfloat-abi=hard
+	CFLAGS += -g -O2 -DVITA -ftree-vectorize \
+	-ffast-math -fno-optimize-sibling-calls \
+	-marm -mtune=cortex-a9 -march=armv7-a -mfpu=neon -mfloat-abi=hard
 	CXXFLAGS += $(CFLAGS)
 	ASFLAGS += $(CFLAGS)
-	LDFLAGS += -marm -mcpu=cortex-a9 -mfpu=neon -mfloat-abi=hard -O2
+	LDFLAGS += -marm -mtune=cortex-a9 -march=armv7-a -mfpu=neon -mfloat-abi=hard -O2
 	PLATFORM_EXT := unix
 	WITH_DYNAREC = arm
 	HAVE_GENERIC_JIT = 0
