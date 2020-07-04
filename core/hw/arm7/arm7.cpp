@@ -3,7 +3,7 @@
 
 #ifdef VITA
 #include <vitasdk.h>
-extern int getVMBlock();
+extern void *arm7_ptr;
 #endif
 
 #define arm_printf(...) DEBUG_LOG(AICA_ARM, __VA_ARGS__)
@@ -2059,7 +2059,7 @@ void *armGetEmitPtr()
 void armt_init()
 {
 	InitHash();
-	#ifndef VITA
+#ifndef VITA
 	//align to next page ..
 	ICache = (u8*)(((unat)ARM7_TCB+4095)& ~4095);
 	
@@ -2070,13 +2070,11 @@ void armt_init()
 	#endif
 
 	mem_region_set_exec(ICache, ICacheSize);
-	#endif
+#endif
 #if TARGET_IPHONE
 	memset((u8*)mmap(ICache, ICacheSize, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_FIXED | MAP_PRIVATE | MAP_ANON, 0, 0),0xFF,ICacheSize);
 #elif defined(VITA)
-	SceUID vm_memblock = getVMBlock();
-	sceKernelGetMemBlockBase(vm_memblock, (void**)&ICache);
-	sceKernelOpenVMDomain();
+	ICache = arm7_ptr;
 #else
 	memset(ICache,0xFF,ICacheSize);
 #endif

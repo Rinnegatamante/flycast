@@ -11,7 +11,10 @@ extern uint16_t *gIndices;
 extern float *gVertexBuffer;
 extern uint16_t *gIndicesPtr;
 extern float *gVertexBufferPtr;
-int _newlib_vm_size_user = 1024 * 1024;
+int _newlib_vm_size_user = 17 * 1024 * 1024;
+extern int getVMBlock();
+void *arm7_ptr = nullptr;
+void *sh4_ptr = nullptr;
 #include <vitasdk.h>
 #endif
 
@@ -362,7 +365,14 @@ void retro_init(void)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_INPUT_BITMASKS, NULL))
       libretro_supports_bitmasks = true;
-
+   
+#ifdef VITA
+   SceUID vm_memblock = getVMBlock();
+   sceKernelGetMemBlockBase(vm_memblock, (void**)&arm7_ptr);
+   sh4_ptr = (uint8_t*)arm7_ptr + 1024 * 1024;
+   sceKernelOpenVMDomain();
+#endif
+   
    init_disk_control_interface();
 }
 
