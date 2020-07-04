@@ -9,7 +9,7 @@
 
 #if !defined(TARGET_NO_EXCEPTIONS)
 #ifndef _WIN32
-#ifndef __HAIKU__
+#if !defined(__HAIKU__) && !defined(VITA)
 #include <ucontext.h>
 #endif
 #endif
@@ -396,7 +396,7 @@ static struct sigaction old_sigill;
 
 static int exception_handler_install_platform(void)
 {
-#if defined(HAVE_LIBNX)
+#if defined(HAVE_LIBNX) || defined(VITA)
    return 0;
 #elif !defined(TARGET_NO_EXCEPTIONS)
    struct sigaction new_sa;
@@ -689,7 +689,7 @@ void common_libretro_setup(void)
 #endif
 }
 
-#if !defined(TARGET_NO_EXCEPTIONS) && defined(HAVE_LIBNX)
+#if !defined(TARGET_NO_EXCEPTIONS) && defined(HAVE_LIBNX) && defined(VITA)
 extern "C"
 {
 
