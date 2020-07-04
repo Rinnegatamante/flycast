@@ -7,15 +7,16 @@
 #endif
 
 #ifdef VITA
+#include <vitasdk.h>
 extern uint16_t *gIndices;
 extern float *gVertexBuffer;
 extern uint16_t *gIndicesPtr;
 extern float *gVertexBufferPtr;
 int _newlib_vm_size_user = 17 * 1024 * 1024;
 extern int getVMBlock();
+SceUID vm_memblock;
 void *arm7_ptr = nullptr;
 void *sh4_ptr = nullptr;
-#include <vitasdk.h>
 #endif
 
 #ifdef HAVE_LIBNX
@@ -369,7 +370,7 @@ void retro_init(void)
       libretro_supports_bitmasks = true;
    
 #ifdef VITA
-   SceUID vm_memblock = getVMBlock();
+   vm_memblock = getVMBlock();
    sceKernelGetMemBlockBase(vm_memblock, (void**)&arm7_ptr);
    sh4_ptr = (uint8_t*)arm7_ptr + 1024 * 1024;
    sceKernelOpenVMDomain();
