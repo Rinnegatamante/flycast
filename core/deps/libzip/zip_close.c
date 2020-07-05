@@ -307,10 +307,11 @@ zip_close(struct zip *za)
 	}
 	return -1;
     }
+#ifndef VITA
     mask = umask(0);
     umask(mask);
     chmod(za->zn, 0666&~mask);
-
+#endif
     _zip_free(za);
     free(temp);
     
