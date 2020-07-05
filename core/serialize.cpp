@@ -5,6 +5,7 @@
 #include "hw/aica/aica.h"
 #include "hw/aica/sgc_if.h"
 #include "hw/arm7/arm7.h"
+#include "hw/holly/sb.h"
 #include "hw/holly/sb_mem.h"
 #include "hw/flashrom/flashrom.h"
 #include "hw/mem/_vmem.h"
@@ -79,7 +80,6 @@ extern s16 cdda_sector[CDDA_SIZE];
 extern u32 cdda_index;
 
 //./core/hw/holly/sb.o
-extern Array<RegisterStruct> sb_regs;
 extern u32 SB_ISTNRM;
 extern u32 SB_FFST_rc;
 extern u32 SB_FFST;
@@ -167,17 +167,7 @@ extern bool pal_needs_update;
 extern VArray2 vram;
 
 //./core/hw/sh4/sh4_mmr.o
-extern Array<u8> OnChipRAM;
-extern Array<RegisterStruct> CCN;  //CCN  : 14 registers
-extern Array<RegisterStruct> UBC;   //UBC  : 9 registers
-extern Array<RegisterStruct> BSC;  //BSC  : 18 registers
-extern Array<RegisterStruct> DMAC; //DMAC : 17 registers
-extern Array<RegisterStruct> CPG;   //CPG  : 5 registers
-extern Array<RegisterStruct> RTC;  //RTC  : 16 registers
-extern Array<RegisterStruct> INTC;  //INTC : 4 registers
-extern Array<RegisterStruct> TMU;  //TMU  : 12 registers
-extern Array<RegisterStruct> SCI;   //SCI  : 8 registers
-extern Array<RegisterStruct> SCIF; //SCIF : 10 registers
+extern std::array<u8, OnChipRAM_SIZE> OnChipRAM;
 
 //./core/hw/sh4/sh4_mem.o
 extern VArray2 mem_b;
@@ -198,11 +188,12 @@ extern u64 sh4_sched_ffb;
 extern vector<sched_list> sch_list;
 
 //./core/hw/sh4/interpr/sh4_interpreter.o
-extern int aica_sched;
-extern int rtc_sched;
+extern int aica_schid;
+extern int rtc_schid;
 
 //./core/hw/sh4/modules/serial.o
 extern SCIF_SCFSR2_type SCIF_SCFSR2;
+extern SCIF_SCSCR2_type SCIF_SCSCR2;
 
 //./core/hw/sh4/modules/bsc.o
 extern BSC_PDTRA_type BSC_PDTRA;
@@ -220,13 +211,7 @@ extern u64 tmu_ch_base64[3];
 extern u32 CCN_QACR_TR[2];
 
 //./core/hw/sh4/modules/mmu.o
-extern TLB_Entry UTLB[64];
-extern TLB_Entry ITLB[4];
-#if defined(NO_MMU)
-extern u32 sq_remap[64];
-#else
 extern u32 ITLB_LRU_USE[64];
-#endif
 
 //./core/imgread/common.o
 extern u32 NullDriveDiscType;
@@ -263,7 +248,7 @@ extern int SerStep2;
 extern unsigned char BSerial[];
 extern unsigned char GSerial[];
 
-bool ra_serialize(void *src, unsigned int src_size, void **dest, unsigned int *total_size)
+bool ra_serialize(const void *src, unsigned int src_size, void **dest, unsigned int *total_size)
 {
 	if ( *dest != NULL )
 	{
@@ -287,33 +272,33 @@ bool ra_unserialize(void *src, unsigned int src_size, void **dest, unsigned int 
 	return true ;
 }
 
-bool register_serialize(Array<RegisterStruct>& regs,void **data, unsigned int *total_size )
+template<typename T>
+bool register_serialize(const T& regs,void **data, unsigned int *total_size )
 {
-	int i = 0 ;
-
-	for ( i = 0 ; i < regs.Size ; i++ )
+	for (const auto& reg : regs)
 	{
-		LIBRETRO_S(regs.data[i].flags) ;
-		LIBRETRO_S(regs.data[i].data32) ;
+		LIBRETRO_S(reg.flags);	// TODO unnecessary
+		LIBRETRO_S(reg.data32);
 	}
 
-	return true ;
+	return true;
 }
 
-bool register_unserialize(Array<RegisterStruct>& regs,void **data, unsigned int *total_size, u32 force_size = 0)
+template<typename T>
+bool register_unserialize(T& regs,void **data, unsigned int *total_size, u32 force_size = 0)
 {
 	int i = 0 ;
-	u32 dummy = 0 ;
+	u32 dummy = 0;
 
 	if (force_size == 0)
-	   force_size = regs.Size;
-	for ( i = 0 ; i < force_size ; i++ )
+	   force_size = regs.size();
+	for (int i = 0; i < force_size; i++)
 	{
-		LIBRETRO_US(regs.data[i].flags) ;
-		if ( ! (regs.data[i].flags & REG_RF) )
-			LIBRETRO_US(regs.data[i].data32) ;
+		LIBRETRO_US(dummy);	// regs[i].flags TODO unnecessary
+		if (!(regs[i].flags & REG_RF))
+			LIBRETRO_US(regs[i].data32);
 		else
-			LIBRETRO_US(dummy) ;
+			LIBRETRO_US(dummy);
 	}
 	return true ;
 }
@@ -322,7 +307,7 @@ bool dc_serialize(void **data, unsigned int *total_size)
 {
 	int i = 0;
 	int j = 0;
-	serialize_version_enum version = V9;
+	serialize_version_enum version = V11;
 
 	*total_size = 0 ;
 
@@ -431,9 +416,11 @@ bool dc_serialize(void **data, unsigned int *total_size)
 	LIBRETRO_S(ta_fsm[2048]);
 	LIBRETRO_S(ta_fsm_cl);
 
+	SerializeTAContext(data, total_size);
+
 	LIBRETRO_SA(vram.data, vram.size);
 
-	LIBRETRO_SA(OnChipRAM.data,OnChipRAM_SIZE);
+	LIBRETRO_SA(OnChipRAM.data(), OnChipRAM_SIZE);
 
 	register_serialize(CCN, data, total_size) ;
 	register_serialize(UBC, data, total_size) ;
@@ -479,13 +466,13 @@ bool dc_serialize(void **data, unsigned int *total_size)
 
 	LIBRETRO_S(sh4_sched_ffb);
 
-	LIBRETRO_S(sch_list[aica_sched].tag) ;
-	LIBRETRO_S(sch_list[aica_sched].start) ;
-	LIBRETRO_S(sch_list[aica_sched].end) ;
+	LIBRETRO_S(sch_list[aica_schid].tag) ;
+	LIBRETRO_S(sch_list[aica_schid].start) ;
+	LIBRETRO_S(sch_list[aica_schid].end) ;
 
-	LIBRETRO_S(sch_list[rtc_sched].tag) ;
-	LIBRETRO_S(sch_list[rtc_sched].start) ;
-	LIBRETRO_S(sch_list[rtc_sched].end) ;
+	LIBRETRO_S(sch_list[rtc_schid].tag) ;
+	LIBRETRO_S(sch_list[rtc_schid].start) ;
+	LIBRETRO_S(sch_list[rtc_schid].end) ;
 
 	LIBRETRO_S(sch_list[gdrom_sched].tag) ;
 	LIBRETRO_S(sch_list[gdrom_sched].start) ;
@@ -525,6 +512,7 @@ bool dc_serialize(void **data, unsigned int *total_size)
 #endif
 
 	LIBRETRO_S(SCIF_SCFSR2);
+	LIBRETRO_S(SCIF_SCSCR2);
 	LIBRETRO_S(BSC_PDTRA);
 
 	LIBRETRO_SA(tmu_shift,3);
@@ -536,13 +524,10 @@ bool dc_serialize(void **data, unsigned int *total_size)
 
 	LIBRETRO_SA(CCN_QACR_TR,2);
 
-	LIBRETRO_SA(UTLB,64);
-	LIBRETRO_SA(ITLB,4);
-#if defined(NO_MMU)
-	LIBRETRO_SA(sq_remap,64);
-#else
-	LIBRETRO_SA(ITLB_LRU_USE,64);
-#endif
+	LIBRETRO_S(UTLB);
+	LIBRETRO_S(ITLB);
+	LIBRETRO_S(sq_remap);
+	LIBRETRO_S(ITLB_LRU_USE);
 
 	LIBRETRO_S(NullDriveDiscType);
 	LIBRETRO_SA(q_subchannel,96);
@@ -818,9 +803,12 @@ bool dc_unserialize(void **data, unsigned int *total_size, size_t actual_data_si
 	}
 	KillTex = true;
 	pal_needs_update = true;
+	if (version >= V10)
+		UnserializeTAContext(data, total_size);
+
 	LIBRETRO_USA(vram.data, vram.size);
 
-	LIBRETRO_USA(OnChipRAM.data,OnChipRAM_SIZE);
+	LIBRETRO_USA(OnChipRAM.data(), OnChipRAM_SIZE);
 
 	register_unserialize(CCN, data, total_size, version < V4 ? 16 : 0) ;
 	register_unserialize(UBC, data, total_size) ;
@@ -875,13 +863,13 @@ bool dc_unserialize(void **data, unsigned int *total_size, size_t actual_data_si
 		   LIBRETRO_US(dummy_int);	// sh4_sched_next_id
 	}
 
-	LIBRETRO_US(sch_list[aica_sched].tag) ;
-	LIBRETRO_US(sch_list[aica_sched].start) ;
-	LIBRETRO_US(sch_list[aica_sched].end) ;
+	LIBRETRO_US(sch_list[aica_schid].tag) ;
+	LIBRETRO_US(sch_list[aica_schid].start) ;
+	LIBRETRO_US(sch_list[aica_schid].end) ;
 
-	LIBRETRO_US(sch_list[rtc_sched].tag) ;
-	LIBRETRO_US(sch_list[rtc_sched].start) ;
-	LIBRETRO_US(sch_list[rtc_sched].end) ;
+	LIBRETRO_US(sch_list[rtc_schid].tag) ;
+	LIBRETRO_US(sch_list[rtc_schid].start) ;
+	LIBRETRO_US(sch_list[rtc_schid].end) ;
 
 	LIBRETRO_US(sch_list[gdrom_sched].tag) ;
 	LIBRETRO_US(sch_list[gdrom_sched].start) ;
@@ -942,6 +930,8 @@ bool dc_unserialize(void **data, unsigned int *total_size, size_t actual_data_si
 		LIBRETRO_SKIP(1); // SCIF_SCFRDR2
 		LIBRETRO_US(dummy_int); // SCIF_SCFDR2
 	}
+	else if (version >= V11)
+		LIBRETRO_US(SCIF_SCSCR2);
 	LIBRETRO_US(BSC_PDTRA);
 
 	LIBRETRO_USA(tmu_shift,3);
@@ -975,14 +965,12 @@ bool dc_unserialize(void **data, unsigned int *total_size, size_t actual_data_si
 	}
 	else
 	{
-		LIBRETRO_USA(UTLB,64);
-		LIBRETRO_USA(ITLB,4);
+		LIBRETRO_US(UTLB);
+		LIBRETRO_US(ITLB);
 	}
-#if defined(NO_MMU)
-	LIBRETRO_USA(sq_remap,64);
-#else
-	LIBRETRO_USA(ITLB_LRU_USE,64);
-#endif
+	if (version >= V11)
+		LIBRETRO_US(sq_remap);
+	LIBRETRO_US(ITLB_LRU_USE);
 
 	LIBRETRO_US(NullDriveDiscType);
 	LIBRETRO_USA(q_subchannel,96);
