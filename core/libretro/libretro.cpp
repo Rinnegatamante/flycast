@@ -13,7 +13,9 @@ extern float *gVertexBuffer;
 extern uint16_t *gIndicesPtr;
 extern float *gVertexBufferPtr;
 int _newlib_vm_size_user = 17 * 1024 * 1024;
-extern int getVMBlock();
+extern "C" {
+	extern int getVMBlock();
+};
 SceUID vm_memblock;
 void *arm7_ptr = nullptr;
 void *sh4_ptr = nullptr;

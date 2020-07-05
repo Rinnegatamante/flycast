@@ -67,7 +67,9 @@ void CacheFlush(void* code, void* pEnd)
 #elif defined(VITA)
 typedef unsigned int SceSize;
 typedef int SceUID;
-int sceKernelSyncVMDomain(SceUID uid, void *data, SceSize size);
+extern "C" {
+	int sceKernelSyncVMDomain(SceUID uid, void *data, SceSize size);
+};
 extern SceUID vm_memblock;
 void CacheFlush(void* code, void* pEnd)
 {

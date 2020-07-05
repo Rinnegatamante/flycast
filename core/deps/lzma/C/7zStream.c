@@ -7,6 +7,7 @@
 
 #include "7zTypes.h"
 
+#ifndef VITA
 SRes SeqInStream_Read2(const ISeqInStream *stream, void *buf, size_t size, SRes errorType)
 {
   while (size != 0)
@@ -25,7 +26,7 @@ SRes SeqInStream_Read(const ISeqInStream *stream, void *buf, size_t size)
 {
   return SeqInStream_Read2(stream, buf, size, SZ_ERROR_INPUT_EOF);
 }
-
+#endif
 SRes SeqInStream_ReadByte(const ISeqInStream *stream, Byte *buf)
 {
   size_t processed = 1;
@@ -33,8 +34,7 @@ SRes SeqInStream_ReadByte(const ISeqInStream *stream, Byte *buf)
   return (processed == 1) ? SZ_OK : SZ_ERROR_INPUT_EOF;
 }
 
-
-
+#ifndef VITA
 SRes LookInStream_SeekTo(const ILookInStream *stream, UInt64 offset)
 {
   Int64 t = offset;
@@ -69,7 +69,7 @@ SRes LookInStream_Read(const ILookInStream *stream, void *buf, size_t size)
 {
   return LookInStream_Read2(stream, buf, size, SZ_ERROR_INPUT_EOF);
 }
-
+#endif
 
 
 #define GET_LookToRead2 CLookToRead2 *p = CONTAINER_FROM_VTBL(pp, CLookToRead2, vt);
@@ -158,19 +158,9 @@ static SRes SecToLook_Read(const ISeqInStream *pp, void *buf, size_t *size)
   CSecToLook *p = CONTAINER_FROM_VTBL(pp, CSecToLook, vt);
   return LookInStream_LookRead(p->realStream, buf, size);
 }
-
+#ifndef VITA
 void SecToLook_CreateVTable(CSecToLook *p)
 {
   p->vt.Read = SecToLook_Read;
 }
-
-static SRes SecToRead_Read(const ISeqInStream *pp, void *buf, size_t *size)
-{
-  CSecToRead *p = CONTAINER_FROM_VTBL(pp, CSecToRead, vt);
-  return ILookInStream_Read(p->realStream, buf, size);
-}
-
-void SecToRead_CreateVTable(CSecToRead *p)
-{
-  p->vt.Read = SecToRead_Read;
-}
+#endif

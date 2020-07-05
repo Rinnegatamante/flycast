@@ -5,7 +5,9 @@
 
 #ifndef VITA
 #include <sys/mman.h>
-
+#else
+#include <malloc.h> 
+#endif
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -88,6 +90,9 @@ bool mem_region_lock(void *start, size_t len)
 			printf("Failed to SetPerm Perm_R on %p len 0x%x rc 0x%x\n", (void*)addr, PAGE_SIZE, rc);
 		}
 	}
+#elif defined(VITA)
+	// TODO
+	return true;
 #else
 	if (mprotect((u8*)start - inpage, len + inpage, PROT_READ))
 		die("mprotect failed...");
@@ -118,7 +123,9 @@ bool mem_region_unlock(void *start, size_t len)
 			printf("Failed to SetPerm Perm_Rw on %p len 0x%x rc 0x%x\n", (void*)addr, PAGE_SIZE, rc);
 		}
 	}
-
+#elif defined(VITA)
+	// TODO
+	return true;
 #else
 	if (mprotect((u8*)start - inpage, len + inpage, PROT_READ | PROT_WRITE))
 		// Add some way to see why it failed? gdb> info proc mappings
@@ -134,6 +141,9 @@ bool mem_region_set_exec(void *start, size_t len)
 	
 #ifdef HAVE_LIBNX
 	svcSetMemoryPermission((void*)((uintptr_t)start - inpage), len + inpage, Perm_R); // *shrugs*
+#elif defined(VITA)
+	// TODO
+	return true;
 #else
 	if (mprotect((u8*)start - inpage, len + inpage, PROT_READ | PROT_WRITE | PROT_EXEC))
 		die("mprotect  failed...");
@@ -145,6 +155,9 @@ void *mem_region_reserve(void *start, size_t len)
 {
 #ifdef HAVE_LIBNX
 	return virtmemReserve(len);
+#elif defined(VITA)
+	// TODO
+	return NULL;
 #else
 	void *p = mmap(start, len, PROT_NONE, MAP_PRIVATE | MAP_ANON, -1, 0);
 	if (p == MAP_FAILED)
@@ -160,6 +173,9 @@ void *mem_region_reserve(void *start, size_t len)
 bool mem_region_release(void *start, size_t len)
 {
 #ifdef HAVE_LIBNX
+	return true;
+#elif defined(VITA)
+	// TODO
 	return true;
 #else
 	return munmap(start, len) == 0;
@@ -178,6 +194,9 @@ void *mem_region_map_file(void *file_handle, void *dest, size_t len, size_t offs
 	}
 
 	return dest;
+#elif defined(VITA)
+	// TODO
+	return NULL;
 #else
 	int flags = MAP_SHARED | MAP_NOSYNC | (dest != NULL ? MAP_FIXED : 0);
 	void *p = mmap(dest, len, PROT_READ | (readwrite ? PROT_WRITE : 0), flags, (int)(uintptr_t)file_handle, offset);
@@ -202,7 +221,7 @@ static mem_handle_t allocate_shared_filemem(unsigned size) {
 	#if defined(_ANDROID)
 	// Use Android's specific shmem stuff.
 	fd = ashmem_create_region(0, size);
-	#elif defined(HAVE_LIBNX)
+	#elif defined(HAVE_LIBNX) || defined(VITA)
 	void* mem = memalign(0x1000, size);
 	return (uintptr_t)mem;
 	#else
@@ -300,7 +319,7 @@ void vmem_platform_destroy() {
 
 // Resets a chunk of memory by deleting its data and setting its protection back.
 void vmem_platform_reset_mem(void *ptr, unsigned size_bytes) {
-#ifndef HAVE_LIBNX
+#if !defined(HAVE_LIBNX) && !defined(VITA)
 	// Mark them as non accessible.
 	mprotect(ptr, size_bytes, PROT_NONE);
 	// Tell the kernel to flush'em all (FIXME: perhaps unmap+mmap 'd be better?)
@@ -315,6 +334,8 @@ void vmem_platform_reset_mem(void *ptr, unsigned size_bytes) {
 	#elif defined(MADV_FREE)
 	madvise(ptr, size_bytes, MADV_FREE);
 	#endif
+#elif defined(VITA)
+	// TODO
 #else
 	svcSetMemoryPermission(ptr, size_bytes, Perm_None);
 #endif // HAVE_LIBNX
@@ -348,6 +369,7 @@ void vmem_platform_create_mappings(const vmem_mapping *vmem_maps, unsigned numma
 
 // Prepares the code region for JIT operations, thus marking it as RWX
 bool vmem_platform_prepare_jit_block(void *code_area, unsigned size, void **code_area_rwx) {
+#ifndef VITA
 	// Try to map is as RWX, this fails apparently on OSX (and perhaps other systems?)
 	if (!mem_region_set_exec(code_area, size))
 	{
@@ -362,11 +384,15 @@ bool vmem_platform_prepare_jit_block(void *code_area, unsigned size, void **code
 
 	// Pointer location should be same:
 	*code_area_rwx = code_area;
+#endif
 	return true;
 }
 
 // Use two addr spaces: need to remap something twice, therefore use allocate_shared_filemem()
 bool vmem_platform_prepare_jit_block(void *code_area, unsigned size, void **code_area_rw, uintptr_t *rx_offset) {
+#ifdef VITA
+	return true;
+#else
 #ifndef HAVE_LIBNX
 	shmem_fd2 = allocate_shared_filemem(size);
 	if (shmem_fd2 < 0)
@@ -399,8 +425,8 @@ bool vmem_platform_prepare_jit_block(void *code_area, unsigned size, void **code
 	INFO_LOG(DYNAREC, "Info: Using NO_RWX mode, rx ptr: %p, rw ptr: %p, offset: %lu\n", ptr_rx, ptr_rw, (unsigned long)*rx_offset);
 
 	return (ptr_rw != MAP_FAILED);
-}
 #endif
+}
 
 // Some OSes restrict cache flushing, cause why not right? :D
 

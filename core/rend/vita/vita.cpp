@@ -810,9 +810,6 @@ static bool RenderFrame(void)
    }
 
 	KillTex = false;
-   
-   if (is_rtt)
-      ReadRTTBuffer();
 
 	return !is_rtt;
 }
