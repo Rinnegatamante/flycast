@@ -1117,7 +1117,7 @@ endif
 
 ifeq ($(platform), vita)
 %.o: %.S
-	$(CC) $(ASFLAGS) -c $(INCFLAGS) $< -o $@
+	$(CC) $(CFLAGS) $(ASFLAGS) -c $(INCFLAGS) $< -o $@
 else
 %.o: %.S
 	$(CC_AS) $(ASFLAGS) $(INCFLAGS) $< -o $@
