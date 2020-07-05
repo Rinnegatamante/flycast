@@ -12,7 +12,7 @@ extern uint16_t *gIndices;
 extern float *gVertexBuffer;
 extern uint16_t *gIndicesPtr;
 extern float *gVertexBufferPtr;
-int _newlib_vm_size_user = 17 * 1024 * 1024;
+int _newlib_vm_size_user = 16 * 1024 * 1024;
 extern "C" {
 	extern int getVMBlock();
 };
