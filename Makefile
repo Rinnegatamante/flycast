@@ -290,7 +290,7 @@ else ifeq ($(platform), vita)
 	AR  = $(PREFIX)-ar
 	EXT    ?= a
 	TARGET := $(TARGET_NAME)_libretro.$(EXT)
-	SHARED += 
+	SHARED += -Wl,--version-script=link.T
 	fpic =
 	ARM_FLOAT_ABI_HARD = 1
 	HAVE_VITAGL = 1
@@ -301,16 +301,16 @@ else ifeq ($(platform), vita)
 	NO_EXCEPTIONS = 1
 	HAVE_OPENMP = 0
 	CFLAGS += -g -O2 -DVITA -ftree-vectorize \
-	-ffast-math -fno-optimize-sibling-calls \
-	-marm -mtune=cortex-a9 -march=armv7-a -mfpu=neon -mfloat-abi=hard
+		-ffast-math -fno-optimize-sibling-calls -fno-exceptions \
+		-marm -mtune=cortex-a9 -march=armv7-a -mfpu=neon -mfloat-abi=hard
 	CXXFLAGS += $(CFLAGS)
 	ASFLAGS += $(CFLAGS)
-	LDFLAGS += -marm -mtune=cortex-a9 -march=armv7-a -mfpu=neon -mfloat-abi=hard -O2
+	LDFLAGS += -marm -mtune=cortex-a9 -march=armv7-a -mfpu=neon -mfloat-abi=hard -O2 -fno-exceptions
 	PLATFORM_EXT := unix
 	WITH_DYNAREC = arm
 	HAVE_GENERIC_JIT = 0
-	CORE_DEFINES += -DLOW_END -DLOW_RES
-	
+	CORE_DEFINES += -DLOW_END -DLOW_RES -DNO_MMU
+
 #########################################
 
 # sun8i Allwinner H2+ / H3 for mainline Builds
