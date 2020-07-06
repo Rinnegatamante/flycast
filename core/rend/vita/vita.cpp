@@ -46,7 +46,6 @@ static const char* VertexShaderSource = R"(void main(
 	float4 in_offs,
 	float2 in_uv,
 	uniform float4 scale,
-	uniform float4 depth_scale,
 	uniform float extra_depth_scale,
 	uniform float sp_FOG_DENSITY,
 	float4 out vtx_base : COLOR0,
@@ -60,7 +59,7 @@ static const char* VertexShaderSource = R"(void main(
 	vpos = in_pos;
 	
 	vpos.w = extra_depth_scale / vpos.z;
-	vpos.z = depth_scale.x + depth_scale.y * vpos.w; 
+	vpos.z = vpos.w; 
 
 	vpos.xy = vpos.xy * scale.xy - scale.zw; 
 	vpos.xy *= vpos.w; 
@@ -251,7 +250,7 @@ PipelineShader *GetProgram(
    	shader->trilinear = trilinear;
    	CompilePipelineShader(shader);
    }
-#ifdef RPI4_SET_UNIFORM_ATTRIBUTES_BUG
+#if defined(RPI4_SET_UNIFORM_ATTRIBUTES_BUG) || defined(VITA)
     // rpi 4 has a bug where it does not save uniform and attribute state with
     // the program, so they have to be reinit each time you reuse the program
     glcache.UseProgram(shader->program);
@@ -279,6 +278,7 @@ void findGLVersion()
    gl.max_anisotropy = 1.f;
 }
 
+uint32_t shader_idx = 0;
 GLuint gl_CompileShader(const char* shader,GLuint type)
 {
 	GLint result;
@@ -289,7 +289,7 @@ GLuint gl_CompileShader(const char* shader,GLuint type)
 
 	//lets see if it compiled ...
 	glGetShaderiv(rv, GL_COMPILE_STATUS, &result);
-
+	
 	if (!result)
 		WARN_LOG(RENDERER, "Shader: %s\n", result ? "compiled!" : "failed to compile");
 
@@ -307,14 +307,15 @@ GLuint gl_CompileAndLink(const char* VertexShader, const char* FragmentShader)
 
 	glAttachShader(program, vs);
 	glAttachShader(program, ps);
+	
+	glLinkProgram(program);
 
 	/* Bind vertex attribute to VBO inputs */
 	vglBindPackedAttribLocation(program, 0, "in_pos",            3, GL_FLOAT,                         0, sizeof(float) * 11);
 	vglBindPackedAttribLocation(program, 1, "in_base",           4, GL_UNSIGNED_BYTE, sizeof(float) * 3, sizeof(float) * 11);
 	vglBindPackedAttribLocation(program, 2, "in_offs",           4, GL_UNSIGNED_BYTE, sizeof(float) * 4, sizeof(float) * 11);
 	vglBindPackedAttribLocation(program, 3, "in_uv",             2, GL_FLOAT        , sizeof(float) * 5, sizeof(float) * 11);
-
-	glLinkProgram(program);
+	
 	glcache.UseProgram(program);
 
 	return program;
@@ -345,7 +346,7 @@ bool CompilePipelineShader(PipelineShader *s)
 
 	//get the uniform locations
 	s->scale = glGetUniformLocation(s->program, "scale");
-	s->depth_scale = glGetUniformLocation(s->program, "depth_scale");
+	s->depth_scale = -1;
 
 	s->extra_depth_scale = glGetUniformLocation(s->program, "extra_depth_scale");
 	
@@ -496,8 +497,6 @@ void DrawGunCrosshair(u8 port, bool draw_additional_primitives);
 
 void vertex_buffer_unmap(void)
 {
-   glBindBuffer(GL_ARRAY_BUFFER, 0);
-   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
 void DoCleanup() {
@@ -699,7 +698,7 @@ static bool RenderFrame(void)
 	}
    else
    {
-      glViewport(0, 0, screen_width, screen_height);
+      //glViewport(0, 0, screen_width, screen_height);
    }
 
    bool wide_screen_on = !is_rtt && settings.rend.WideScreen
@@ -791,8 +790,6 @@ static bool RenderFrame(void)
    {
       glcache.ClearColor(0.f, 0.f, 0.f, 0.f);
       glClear(GL_COLOR_BUFFER_BIT);
-      glBindBuffer(GL_ARRAY_BUFFER, gl.vbo.geometry); glCheck();
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gl.vbo.idxs); glCheck();
       DrawFramebuffer(dc_width, dc_height);
    }
 
