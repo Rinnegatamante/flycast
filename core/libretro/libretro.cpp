@@ -927,14 +927,16 @@ static void update_variables(bool first_startup)
    {
 	   var.key = CORE_OPTION_NAME "_threaded_rendering";
 
+#ifndef VITA
 	   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 	   {
 		   if (!strcmp("enabled", var.value))
-			   settings.rend.ThreadedRendering = false;
+			   settings.rend.ThreadedRendering = true;
 		   else
 			   settings.rend.ThreadedRendering = false;
 	   }
 	   else
+#endif
 		   settings.rend.ThreadedRendering = false;
 
 	   if ( settings.rend.ThreadedRendering  )
