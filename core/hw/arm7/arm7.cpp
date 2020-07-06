@@ -2074,7 +2074,8 @@ void armt_init()
 #if TARGET_IPHONE
 	memset((u8*)mmap(ICache, ICacheSize, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_FIXED | MAP_PRIVATE | MAP_ANON, 0, 0),0xFF,ICacheSize);
 #elif defined(VITA)
-	ICache = arm7_ptr;
+	ICache = (u8*)arm7_ptr;
+	memset(ICache,0xFF,ICacheSize);
 #else
 	memset(ICache,0xFF,ICacheSize);
 #endif
