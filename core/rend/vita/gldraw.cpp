@@ -280,32 +280,6 @@ static void DrawList(const List<PolyParam>& gply, int first, int count)
 
 static vector<SortTrigDrawParam>	pidx_sort;
 
-static void SortTriangles(int first, int count)
-{
-	vector<u32> vidx_sort;
-	GenSorted(first, count, pidx_sort, vidx_sort);
-
-	//Upload to GPU if needed
-   if (pidx_sort.size())
-   {
-      //Bind and upload sorted index buffer
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gl.vbo.idxs2); glCheck();
-      if (gl.index_type == GL_UNSIGNED_SHORT)
-      {
-    	 static bool overrun;
-    	 static List<u16> short_vidx;
-    	 if (short_vidx.daty != NULL)
-    		short_vidx.Free();
-    	 short_vidx.Init(vidx_sort.size(), &overrun, NULL);
-    	 for (int i = 0; i < vidx_sort.size(); i++)
-    		*(short_vidx.Append()) = vidx_sort[i];
-    	 glBufferData(GL_ELEMENT_ARRAY_BUFFER, short_vidx.bytes(), short_vidx.head(), GL_STREAM_DRAW);
-      }
-      else
-    	 glBufferData(GL_ELEMENT_ARRAY_BUFFER, vidx_sort.size() * sizeof(u32), &vidx_sort[0], GL_STREAM_DRAW);
-   }
-}
-
 //All pixels are in area 0 by default.
 //If inside an 'in' volume, they are in area 1
 //if inside an 'out' volume, they are in area 0
@@ -491,9 +465,6 @@ void DrawFramebuffer(float w, float h)
 	idx_incr = sizeof(indices) / sizeof(uint16_t);
 	SetupMainVBO();
 	vglDrawObjects(GL_TRIANGLE_STRIP, 5, GL_FALSE);
-
- 	glcache.DeleteTextures(1, &fbTextureId);
-	fbTextureId = 0;
 }
 
 void UpdateVmuTexture(int vmu_screen_number)

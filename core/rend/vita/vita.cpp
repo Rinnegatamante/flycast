@@ -201,7 +201,7 @@ void main(
 )";
 
 int screen_width  = 640;
-int screen_height = 480;
+int screen_height = 480
 GLuint fogTextureId;
 
 PipelineShader *GetProgram(
@@ -250,9 +250,6 @@ PipelineShader *GetProgram(
    	shader->trilinear = trilinear;
    	CompilePipelineShader(shader);
    }
-#if defined(RPI4_SET_UNIFORM_ATTRIBUTES_BUG) || defined(VITA)
-    // rpi 4 has a bug where it does not save uniform and attribute state with
-    // the program, so they have to be reinit each time you reuse the program
     glcache.UseProgram(shader->program);
     //setup texture 0 as the input for the shader
     GLuint gu=glGetUniformLocation(shader->program, "tex");
@@ -263,7 +260,6 @@ PipelineShader *GetProgram(
     if (gu != -1)
         glUniform1i(gu, 1);
     ShaderUniforms.Set(shader);
-#endif
 
    return shader;
 }
@@ -282,7 +278,6 @@ uint32_t shader_idx = 0;
 GLuint gl_CompileShader(const char* shader,GLuint type)
 {
 	GLint result;
-	GLint compile_log_len;
 	GLuint rv=glCreateShader(type);
 	glShaderSource(rv, 1,&shader, NULL);
 	glCompileShader(rv);
@@ -291,15 +286,13 @@ GLuint gl_CompileShader(const char* shader,GLuint type)
 	glGetShaderiv(rv, GL_COMPILE_STATUS, &result);
 	
 	if (!result)
-		WARN_LOG(RENDERER, "Shader: %s\n", result ? "compiled!" : "failed to compile");
+		WARN_LOG(RENDERER, "Shader: failed to compile");
 
 	return rv;
 }
 
 GLuint gl_CompileAndLink(const char* VertexShader, const char* FragmentShader)
 {
-	GLint compile_log_len;
-	GLint result;
 	/* Create vertex/fragment shaders */
 	GLuint vs      = gl_CompileShader(VertexShader ,GL_VERTEX_SHADER);
 	GLuint ps      = gl_CompileShader(FragmentShader ,GL_FRAGMENT_SHADER);
@@ -311,10 +304,10 @@ GLuint gl_CompileAndLink(const char* VertexShader, const char* FragmentShader)
 	glLinkProgram(program);
 
 	/* Bind vertex attribute to VBO inputs */
-	vglBindPackedAttribLocation(program, 0, "in_pos",            3, GL_FLOAT,                         0, sizeof(float) * 11);
+	vglBindPackedAttribLocation(program, 0, "in_pos" ,           3, GL_FLOAT        ,                 0, sizeof(float) * 11);
 	vglBindPackedAttribLocation(program, 1, "in_base",           4, GL_UNSIGNED_BYTE, sizeof(float) * 3, sizeof(float) * 11);
 	vglBindPackedAttribLocation(program, 2, "in_offs",           4, GL_UNSIGNED_BYTE, sizeof(float) * 4, sizeof(float) * 11);
-	vglBindPackedAttribLocation(program, 3, "in_uv",             2, GL_FLOAT        , sizeof(float) * 5, sizeof(float) * 11);
+	vglBindPackedAttribLocation(program, 3, "in_uv"  ,           2, GL_FLOAT        , sizeof(float) * 5, sizeof(float) * 11);
 	
 	glcache.UseProgram(program);
 
