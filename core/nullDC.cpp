@@ -400,9 +400,10 @@ int dc_init()
 	setbuf(stdin,0);
 	setbuf(stdout,0);
 	setbuf(stderr,0);
+#ifndef VITA
    extern void common_libretro_setup(void);
    common_libretro_setup();
-
+#endif
 	if (!_vmem_reserve())
 	{
 		ERROR_LOG(VMEM, "Failed to alloc mem");

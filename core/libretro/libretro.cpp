@@ -13,6 +13,7 @@ extern float *gVertexBuffer;
 extern uint16_t *gIndicesPtr;
 extern float *gVertexBufferPtr;
 int _newlib_vm_size_user = 16 * 1024 * 1024;
+int _newlib_heap_size_user = 256 * 1024 * 1024;
 extern "C" {
 	extern int getVMBlock();
 };
@@ -733,7 +734,9 @@ static void update_variables(bool first_startup)
    }
 
    var.key = CORE_OPTION_NAME "_volume_modifier_enable";
-
+#ifdef VITA
+   settings.rend.ModifierVolumes      = false;
+#else
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (!strcmp(var.value, "disabled"))
@@ -743,7 +746,7 @@ static void update_variables(bool first_startup)
    }
    else
    	settings.rend.ModifierVolumes      = true;
-
+#endif
    var.key = CORE_OPTION_NAME "_cable_type";
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -890,7 +893,7 @@ static void update_variables(bool first_startup)
    else
       settings.rend.MaxFilteredTextureSize = 256;
 #endif
-
+#ifndef VITA
    var.key = CORE_OPTION_NAME "_enable_rttb";
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -901,6 +904,7 @@ static void update_variables(bool first_startup)
          settings.rend.RenderToTextureBuffer = false;
    }
    else
+#endif
       settings.rend.RenderToTextureBuffer = false;
 
    var.key = CORE_OPTION_NAME "_render_to_texture_upscaling";
@@ -926,7 +930,7 @@ static void update_variables(bool first_startup)
 	   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 	   {
 		   if (!strcmp("enabled", var.value))
-			   settings.rend.ThreadedRendering = true;
+			   settings.rend.ThreadedRendering = false;
 		   else
 			   settings.rend.ThreadedRendering = false;
 	   }
