@@ -233,6 +233,7 @@ u64 pixel_buffer_size = 512 * 1024 * 1024;	// Initial size 512 MB
 static void *emu_thread_func(void *)
 {
     emu_in_thread = true ;
+	sceKernelOpenVMDomain();
     while ( true )
     {
     	performed_serialization = false ;
@@ -676,7 +677,7 @@ static void update_variables(bool first_startup)
 	  renderer_changed = true;
 
    var.key = CORE_OPTION_NAME "_mipmapping";
-
+#ifndef VITA
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (!strcmp(var.value, "enabled"))
@@ -686,7 +687,9 @@ static void update_variables(bool first_startup)
    }
    else
       settings.rend.UseMipmaps      = 1;
-
+#else
+   settings.rend.UseMipmaps      = 0;
+#endif
    if (first_startup)
    {
       var.key = CORE_OPTION_NAME "_system";
@@ -927,7 +930,6 @@ static void update_variables(bool first_startup)
    {
 	   var.key = CORE_OPTION_NAME "_threaded_rendering";
 
-#ifndef VITA
 	   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 	   {
 		   if (!strcmp("enabled", var.value))
@@ -936,7 +938,6 @@ static void update_variables(bool first_startup)
 			   settings.rend.ThreadedRendering = false;
 	   }
 	   else
-#endif
 		   settings.rend.ThreadedRendering = false;
 
 	   if ( settings.rend.ThreadedRendering  )
@@ -1230,6 +1231,7 @@ void retro_run (void)
 	   // On the first call, we start the emulator thread
 	   if (first_run)
 	   {
+		   sceKernelCloseVMDomain();
 		   emu_thread.Start();
 		   first_run = false;
 	   }

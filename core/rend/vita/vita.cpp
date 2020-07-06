@@ -201,7 +201,7 @@ void main(
 )";
 
 int screen_width  = 640;
-int screen_height = 480
+int screen_height = 480;
 GLuint fogTextureId;
 
 PipelineShader *GetProgram(
