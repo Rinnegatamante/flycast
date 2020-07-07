@@ -38,6 +38,22 @@ float fb_scale_x = 0.0f;
 float fb_scale_y = 0.0f;
 float scale_x, scale_y;
 
+void log2file(const char *format, ...) {
+	__gnuc_va_list arg;
+	int done;
+	va_start(arg, format);
+	char msg[512];
+	done = vsprintf(msg, format, arg);
+	va_end(arg);
+	int i;
+	sprintf(msg, "%s\n", msg);
+	FILE *log = fopen("ux0:/data/flycast.txt", "a+");
+	if (log != NULL) {
+		fwrite(msg, 1, strlen(msg), log);
+		fclose(log);
+	}
+}
+
 //Fragment and vertex shaders code
 
 static const char* VertexShaderSource = R"(void main(
@@ -109,8 +125,8 @@ void main(
 	uniform float3 sp_FOG_COL_RAM,
 	uniform float3 sp_FOG_COL_VERT,
 	uniform float sp_FOG_DENSITY,
-	uniform sampler2D tex,
-	uniform sampler2D fog_table,
+	uniform sampler2D tex : TEXUNIT0,
+	uniform sampler2D fog_table : TEXUNIT1,
 	uniform float trilinear_alpha,
 	uniform float4 fog_clamp_min,
 	uniform float4 fog_clamp_max,
@@ -191,11 +207,10 @@ void main(
 	#if cp_AlphaTest == 1
 	color.a = 1.0;
 	#endif 
-	//color.rgb = float3(coords.w * sp_FOG_DENSITY / 128.0);
-
+	
 	float w = coords.w * 100000.0;
 	frag_depth = log2(1.0 + w) / 34.0;
-
+	
 	frag_clr = color;
 }
 )";
@@ -251,14 +266,6 @@ PipelineShader *GetProgram(
    	CompilePipelineShader(shader);
    }
     glcache.UseProgram(shader->program);
-    //setup texture 0 as the input for the shader
-    GLuint gu=glGetUniformLocation(shader->program, "tex");
-    if (shader->pp_Texture==1)
-        glUniform1i(gu,0);
-    // Setup texture 1 as the fog table
-    gu = glGetUniformLocation(shader->program, "fog_table");
-    if (gu != -1)
-        glUniform1i(gu, 1);
     ShaderUniforms.Set(shader);
 
    return shader;
@@ -329,14 +336,6 @@ bool CompilePipelineShader(PipelineShader *s)
 
 	s->program            = gl_CompileAndLink(vshader, pshader);
 
-
-	//setup texture 0 as the input for the shader
-	GLuint gu;
-	if (s->pp_Texture==1) {
-		gu=glGetUniformLocation(s->program, "tex");
-		glUniform1i(gu,0);
-	}
-
 	//get the uniform locations
 	s->scale = glGetUniformLocation(s->program, "scale");
 	s->depth_scale = -1;
@@ -362,8 +361,6 @@ bool CompilePipelineShader(PipelineShader *s)
 	if (s->pp_FogCtrl==0 || s->pp_FogCtrl==3) {
 		s->sp_FOG_COL_RAM = glGetUniformLocation(s->program, "sp_FOG_COL_RAM");
 		s->sp_FOG_DENSITY = glGetUniformLocation(s->program, "sp_FOG_DENSITY");
-		gu = glGetUniformLocation(s->program, "fog_table");
-		glUniform1i(gu, 1);
 	} else {
 		s->sp_FOG_COL_RAM = -1;
 		s->sp_FOG_DENSITY = -1;
@@ -646,59 +643,7 @@ static bool RenderFrame(void)
 
 	ShaderUniforms.PT_ALPHA=(PT_ALPHA_REF&0xFF)/255.0f;
 
-	for (const auto& it : gl.shaders)
-	{
-		glcache.UseProgram(it.second.program);
-		ShaderUniforms.Set(&it.second);
-	}
-
-	//setup render target first
-	if (is_rtt)
-	{
-		GLuint channels,format;
-		switch(FB_W_CTRL.fb_packmode)
-		{
-		case 0: //0x0   0555 KRGB 16 bit  (default)	Bit 15 is the value of fb_kval[7].
-			channels=GL_RGBA;
-			format=GL_UNSIGNED_BYTE;
-			break;
-
-		case 1: //0x1   565 RGB 16 bit
-			channels=GL_RGB;
-			format=GL_UNSIGNED_SHORT_5_6_5;
-			break;
-
-		case 2: //0x2   4444 ARGB 16 bit
-			channels=GL_RGBA;
-			format=GL_UNSIGNED_BYTE;
-			break;
-
-		case 3://0x3    1555 ARGB 16 bit    The alpha value is determined by comparison with the value of fb_alpha_threshold.
-			channels=GL_RGBA;
-			format=GL_UNSIGNED_BYTE;
-			break;
-
-		case 4: //0x4   888 RGB 24 bit packed
-		case 5: //0x5   0888 KRGB 32 bit    K is the value of fk_kval.
-		case 6: //0x6   8888 ARGB 32 bit
-			WARN_LOG(RENDERER, "Unsupported render to texture format: %d", FB_W_CTRL.fb_packmode);
-         return false;
-		case 7: //7     invalid
-			die("7 is not valid");
-			break;
-		}
-		BindRTT(FB_W_SOF1 & VRAM_MASK, dc_width, dc_height, channels,format);
-	}
-   else
-   {
-      //glViewport(0, 0, screen_width, screen_height);
-   }
-
-   bool wide_screen_on = !is_rtt && settings.rend.WideScreen
-			&& pvrrc.fb_X_CLIP.min == 0
-			&& (pvrrc.fb_X_CLIP.max + 1) / scale_x == 640
-			&& pvrrc.fb_Y_CLIP.min == 0
-			&& (pvrrc.fb_Y_CLIP.max + 1) / scale_y == 480;
+   bool wide_screen_on = true;
 
    // Color is cleared by the background plane
 
