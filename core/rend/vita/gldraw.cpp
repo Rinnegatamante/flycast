@@ -6,7 +6,7 @@ extern uint16_t *gIndices;
 extern float *gVertexBuffer;
 extern uint16_t *gIndicesPtr;
 extern float *gVertexBufferPtr;
-
+extern void log2file(const char *format, ...);
 uint32_t idx_incr = 0, vtx_incr = 0;
 
 /*
@@ -155,6 +155,15 @@ static void SetTextureRepeatMode(GLuint dir, u32 clamp, u32 mirror)
 template <u32 Type, bool SortingEnabled>
 __forceinline static void SetGPState(const PolyParam* gp,u32 cflip=0)
 {
+	// Apparently punch-through polys support blending, or at least some combinations
+	if (Type == ListType_Translucent || Type == ListType_Punch_Through)
+   {
+      glcache.Enable(GL_BLEND);
+      glcache.BlendFunc(SrcBlendGL[gp->tsp.SrcInstr], DstBlendGL[gp->tsp.DstInstr]);
+   }
+   else
+      glcache.Disable(GL_BLEND);
+	
 	if (gp->pcw.Texture && gp->tsp.FilterMode > 1 && Type != ListType_Punch_Through && gp->tcw.MipMapped == 1)
 	{
 		ShaderUniforms.trilinear_alpha = 0.25 * (gp->tsp.MipMapD & 0x3);
@@ -213,15 +222,6 @@ __forceinline static void SetGPState(const PolyParam* gp,u32 cflip=0)
 			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_LOD_BIAS, D_Adjust_LoD_Bias[gp->tsp.MipMapD]);
 #endif
 	}
-
-	// Apparently punch-through polys support blending, or at least some combinations
-	if (Type == ListType_Translucent || Type == ListType_Punch_Through)
-   {
-      glcache.Enable(GL_BLEND);
-      glcache.BlendFunc(SrcBlendGL[gp->tsp.SrcInstr], DstBlendGL[gp->tsp.DstInstr]);
-   }
-   else
-      glcache.Disable(GL_BLEND);
 
    //set cull mode !
    //cflip is required when exploding triangles for triangle sorting
@@ -380,9 +380,6 @@ void SetMVS_Mode(ModifierVolumeMode mv_mode, ISP_Modvol ispc)
 static void SetupMainVBO(void)
 {
 	vglVertexAttribPointerMapped(0, gVertexBuffer);
-	vglVertexAttribPointerMapped(1, gVertexBuffer);
-	vglVertexAttribPointerMapped(2, gVertexBuffer);
-	vglVertexAttribPointerMapped(3, gVertexBuffer);
 	vglIndexPointerMapped(gIndices);
 }
 
