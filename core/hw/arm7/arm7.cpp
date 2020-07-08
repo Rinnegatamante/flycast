@@ -1465,6 +1465,16 @@ extern "C" void armFlushICache(void *code, void *pEnd) {
     sys_dcache_flush(code, (u8*)pEnd - (u8*)code + 1);
     sys_icache_invalidate(code, (u8*)pEnd - (u8*)code + 1);
 }
+#elif defined(VITA)
+typedef unsigned int SceSize;
+typedef int SceUID;
+extern "C" {
+	int sceKernelSyncVMDomain(SceUID uid, void *data, SceSize size);
+};
+extern SceUID vm_memblock;
+extern "C" void armFlushICache(void *code, void *pEnd) {
+    sceKernelSyncVMDomain(vm_memblock, code, (u8*)pEnd - (u8*)code + 1);
+}
 #else
 extern "C" void armFlushICache(void *bgn, void *end) {
 	__builtin___clear_cache((char *)bgn, (char *)end);
