@@ -57,13 +57,12 @@ void log2file(const char *format, ...) {
 //Fragment and vertex shaders code
 
 static const char* VertexShaderSource = R"(void main(
-	float4 in_pos,
+	float3 in_pos,
 	float4 in_base,
 	float4 in_offs,
 	float2 in_uv,
 	uniform float4 scale,
 	uniform float extra_depth_scale,
-	uniform float sp_FOG_DENSITY,
 	float4 out vtx_base : COLOR0,
 	float4 out vtx_offs : COLOR1,
 	float2 out vtx_uv : TEXCOORD0,
@@ -72,7 +71,7 @@ static const char* VertexShaderSource = R"(void main(
 	vtx_base=in_base;
 	vtx_offs=in_offs;
 	vtx_uv=in_uv;
-	vpos = in_pos;
+	vpos.xyz = in_pos;
 	
 	vpos.w = extra_depth_scale / vpos.z;
 	vpos.z = vpos.w; 
@@ -308,13 +307,13 @@ GLuint gl_CompileAndLink(const char* VertexShader, const char* FragmentShader)
 	glAttachShader(program, vs);
 	glAttachShader(program, ps);
 	
-	glLinkProgram(program);
-
 	/* Bind vertex attribute to VBO inputs */
 	vglBindPackedAttribLocation(program, 0, "in_pos" ,           3, GL_FLOAT        ,                 0, sizeof(float) * 11);
 	vglBindPackedAttribLocation(program, 1, "in_base",           4, GL_UNSIGNED_BYTE, sizeof(float) * 3, sizeof(float) * 11);
 	vglBindPackedAttribLocation(program, 2, "in_offs",           4, GL_UNSIGNED_BYTE, sizeof(float) * 4, sizeof(float) * 11);
 	vglBindPackedAttribLocation(program, 3, "in_uv"  ,           2, GL_FLOAT        , sizeof(float) * 5, sizeof(float) * 11);
+	
+	glLinkProgram(program);
 	
 	glcache.UseProgram(program);
 
