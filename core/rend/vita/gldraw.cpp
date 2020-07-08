@@ -6,7 +6,6 @@ extern uint16_t *gIndices;
 extern float *gVertexBuffer;
 extern uint16_t *gIndicesPtr;
 extern float *gVertexBufferPtr;
-extern void log2file(const char *format, ...);
 uint32_t idx_incr = 0, vtx_incr = 0;
 
 /*
