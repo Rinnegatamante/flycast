@@ -38,22 +38,6 @@ float fb_scale_x = 0.0f;
 float fb_scale_y = 0.0f;
 float scale_x, scale_y;
 
-void log2file(const char *format, ...) {
-	__gnuc_va_list arg;
-	int done;
-	va_start(arg, format);
-	char msg[512];
-	done = vsprintf(msg, format, arg);
-	va_end(arg);
-	int i;
-	sprintf(msg, "%s\n", msg);
-	FILE *log = fopen("ux0:/data/flycast.txt", "a+");
-	if (log != NULL) {
-		fwrite(msg, 1, strlen(msg), log);
-		fclose(log);
-	}
-}
-
 //Fragment and vertex shaders code
 
 static const char* VertexShaderSource = R"(void main(
