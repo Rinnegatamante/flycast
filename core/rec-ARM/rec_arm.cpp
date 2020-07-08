@@ -2244,7 +2244,11 @@ void ngen_Compile_arm(RuntimeBlockInfo* block,bool force_checks, bool reset, boo
 	//scheduler
 	if (force_checks)
 	{
+#ifdef VITA
+		s32 sz = 2;
+#else
 		s32 sz = block->sh4_code_size;
+#endif
 		u32 addr = block->addr;
 		MOV32(r0,addr);
 
