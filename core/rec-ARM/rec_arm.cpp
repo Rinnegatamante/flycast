@@ -2224,7 +2224,7 @@ void ngen_Compile_arm(RuntimeBlockInfo* block,bool force_checks, bool reset, boo
 	//pre-load the first reg alloc operations, for better efficiency ..
 	if (!block->oplist.empty())
 		reg.OpBegin(&block->oplist[0],0);
-
+#if defined(VITA_SAFE) || !defined(VITA)
 	//scheduler
 	if (force_checks)
 	{
@@ -2270,7 +2270,7 @@ void ngen_Compile_arm(RuntimeBlockInfo* block,bool force_checks, bool reset, boo
 			}
 		}
 	}
-
+#endif
 	u32 cyc=block->guest_cycles;
 	if (!is_i8r4(cyc))
 	{
