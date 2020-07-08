@@ -1216,7 +1216,9 @@ void retro_run (void)
 {
    bool fastforward = false;
    bool updated     = false;
-
+#ifdef VITA // Temporary hack to force fullscreen
+   glViewport(0, 0, 960, 544);
+#endif   
    if (environ_cb(RETRO_ENVIRONMENT_GET_FASTFORWARDING, &fastforward) && settings.rend.ThreadedRendering)
       settings.aica.LimitFPS = !fastforward;
 
