@@ -485,7 +485,7 @@ static void upload_vertex_indices()
 	short_idx.Init(pvrrc.idx.used(), &overrun, NULL);
 	for (u32 *p = pvrrc.idx.head(); p < pvrrc.idx.LastPtr(0); p++)
 		*(short_idx.Append()) = *p;
-	memcpy(gIndices, short_idx.head(), short_idx.bytes());
+	memcpy_neon(gIndices, short_idx.head(), short_idx.bytes());
 	idx_incr = short_idx.bytes() / sizeof(uint16_t);
 }
 
@@ -642,7 +642,7 @@ static bool RenderFrame(void)
    if (!pvrrc.isRenderFramebuffer)
    {
 	  gVertexBuffer += vtx_incr;
-	  memcpy(gVertexBuffer, pvrrc.verts.head(), pvrrc.verts.bytes());
+	  memcpy_neon(gVertexBuffer, pvrrc.verts.head(), pvrrc.verts.bytes());
 	  vtx_incr = pvrrc.verts.bytes() / sizeof(float);
 	  
       upload_vertex_indices();
