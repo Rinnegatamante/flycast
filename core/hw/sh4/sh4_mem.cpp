@@ -13,7 +13,11 @@
 #include "hw/mem/_vmem.h"
 #include "modules/mmu.h"
 
-
+#ifdef VITA
+extern "C"{
+	void *memcpy_neon(void *destination, const void *source, size_t num);
+};
+#endif
 
 //main system mem
 VArray2 mem_b;
@@ -228,7 +232,11 @@ void WriteMemBlock_nommu_dma(u32 dst,u32 src,u32 size)
 
 	if (dst_ptr && src_ptr)
 	{
+#ifdef VITA
+		memcpy_neon((u8*)dst_ptr+(dst&dst_msk),(u8*)src_ptr+(src&src_msk),size);
+#else
 		memcpy((u8*)dst_ptr+(dst&dst_msk),(u8*)src_ptr+(src&src_msk),size);
+#endif
 	}
 	else if (src_ptr)
 	{
@@ -251,7 +259,11 @@ void WriteMemBlock_nommu_ptr(u32 dst,u32* src,u32 size)
 	if (dst_ptr)
 	{
 		dst&=dst_msk;
+#ifdef VITA
+		memcpy_neon((u8*)dst_ptr+dst,src,size);
+#else
 		memcpy((u8*)dst_ptr+dst,src,size);
+#endif
 	}
 	else
 	{
@@ -285,7 +297,11 @@ void WriteMemBlock_nommu_sq(u32 dst,u32* src)
 	if (dst_ptr)
 	{
 		dst&=dst_msk;
+#ifdef VITA
+		memcpy_neon((u8*)dst_ptr+dst,src,32);
+#else
 		memcpy((u8*)dst_ptr+dst,src,32);
+#endif
 	}
 	else
 	{
