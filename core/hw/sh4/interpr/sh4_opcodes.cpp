@@ -52,6 +52,12 @@
 #define WriteMemBOU16(addr,offset,data) WriteMemU16(addr+offset,data)
 #define WriteMemBOU8(addr,offset,data)  WriteMemU8(addr+offset,data)
 
+#ifdef VITA
+extern "C"{
+	void *memcpy_neon(void *destination, const void *source, size_t num);
+};
+#endif
+
 // 0xxx
 void cpu_iNimp(u32 op, const char* info)
 {
@@ -1240,8 +1246,11 @@ extern "C" void DYNACALL do_sqw_nommu_area_3(u32 dst,u8* sqb)
 extern "C" void DYNACALL do_sqw_nommu_area_3_nonvmem(u32 dst,u8* sqb)
 {
 	u8* pmem = mem_b.data;
-
+#ifdef VITA
+	memcpy_neon((u64*)&pmem[dst&(RAM_MASK-0x1F)],(u64*)&sqb[dst & 0x20],32);
+#else
 	memcpy((u64*)&pmem[dst&(RAM_MASK-0x1F)],(u64*)&sqb[dst & 0x20],32);
+#endif
 }
 
 void DYNACALL do_sqw_nommu_full(u32 dst, u8* sqb) { do_sqw<false>(dst); }
