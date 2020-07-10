@@ -14,6 +14,8 @@
 #include "deps/xxhash/xxhash.h"
 #include "CustomTexture.h"
 
+#define TEX_HASH_CHECK_FRAMES 2
+
 u8* vq_codebook;
 u32 palette_index;
 bool KillTex=false;
@@ -477,7 +479,19 @@ void BaseTextureCacheData::PrintTextureName()
 
 //true if : dirty or paletted texture and hashes don't match
 bool BaseTextureCacheData::NeedsUpdate() {
+#ifdef VITA
+	texture_hash_dirty = false;
+	if (!texture_update_flag) {
+		u32 vram_hash = XXH32(&vram[sa], size, 7);
+		if (texture_update_hash) texture_hash_dirty = texture_update_hash != vram_hash;
+		texture_update_hash = vram_hash;
+	}
+	texture_update_flag = (texture_update_flag + 1) % TEX_HASH_CHECK_FRAMES;
+	
+	bool rc = dirty || texture_hash_dirty
+#else
 	bool rc = dirty
+#endif
 			|| (tcw.PixelFmt == PixelPal4 && palette_hash != pal_hash_16[tcw.PalSelect])
 			|| (tcw.PixelFmt == PixelPal8 && palette_hash != pal_hash_256[tcw.PalSelect >> 4]);
 	return rc;
@@ -647,9 +661,11 @@ void BaseTextureCacheData::Update()
 		&& !Force32BitTexture(tex_type))
 		need_32bit_buffer = false;
 	// TODO avoid upscaling/depost. textures that change too often
-
+#ifndef VITA
 	bool mipmapped = IsMipmapped() && !settings.rend.DumpTextures;
-
+#else
+	bool mipmapped = false;
+#endif
 	if (texconv32 != NULL && need_32bit_buffer)
 	{
 		if (textureUpscaling)
@@ -657,7 +673,7 @@ void BaseTextureCacheData::Update()
 			mipmapped = false;
 		// Force the texture type since that's the only 32-bit one we know
 		tex_type = TextureType::_8888;
-
+#ifndef VITA
 		if (mipmapped)
 		{
 			pb32.init(w, h, true);
@@ -684,6 +700,7 @@ void BaseTextureCacheData::Update()
 			pb32.set_mipmap(0);
 		}
 		else
+#endif
 		{
 			pb32.init(w, h);
 
@@ -721,6 +738,7 @@ void BaseTextureCacheData::Update()
 	}
 	else if (texconv != NULL)
 	{
+#ifndef VITA
 		if (mipmapped)
 		{
 			pb16.init(w, h, true);
@@ -747,6 +765,7 @@ void BaseTextureCacheData::Update()
 			pb16.set_mipmap(0);
 		}
 		else
+#endif
 		{
 			pb16.init(w, h);
 
