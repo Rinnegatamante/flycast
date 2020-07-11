@@ -461,6 +461,8 @@ void DrawFramebuffer(float w, float h)
 	idx_incr = sizeof(indices) / sizeof(uint16_t);
 	SetupMainVBO();
 	vglDrawObjects(GL_TRIANGLE_STRIP, 5, GL_FALSE);
+	glcache.DeleteTextures(1, &fbTextureId);
+	fbTextureId = 0;
 }
 
 void UpdateVmuTexture(int vmu_screen_number)
