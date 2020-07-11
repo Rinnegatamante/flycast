@@ -297,11 +297,11 @@ else ifeq ($(platform), vita)
 	SINGLE_PREC_FLAGS = 1
 	HAVE_LTCG = 0
 	NO_EXCEPTIONS = 1
+	NO_NVMEM = 1
 	HAVE_OPENMP = 0
 	CFLAGS += -g -fsingle-precision-constant -DVITA -ftree-vectorize \
 		-ffast-math -fno-optimize-sibling-calls -fno-exceptions -O3 \
 		-marm -mtune=cortex-a9 -march=armv7-a -mfpu=neon -mfloat-abi=hard
-		
 	CXXFLAGS += $(CFLAGS)
 	ASFLAGS += $(CFLAGS)
 	PLATFORM_EXT := unix
