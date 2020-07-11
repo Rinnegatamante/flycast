@@ -14,7 +14,7 @@
 #include "deps/xxhash/xxhash.h"
 #include "CustomTexture.h"
 
-#define TEX_HASH_CHECK_FRAMES 2
+#define TEX_HASH_CHECK_FRAMES 1
 
 u8* vq_codebook;
 u32 palette_index;
@@ -481,12 +481,12 @@ void BaseTextureCacheData::PrintTextureName()
 bool BaseTextureCacheData::NeedsUpdate() {
 #ifdef VITA
 	texture_hash_dirty = false;
-	if (!texture_update_flag) {
+	if (FrameCount - texture_frame_count > TEX_HASH_CHECK_FRAMES) {
 		u32 vram_hash = XXH32(&vram[sa], size, 7);
 		if (texture_update_hash) texture_hash_dirty = texture_update_hash != vram_hash;
 		texture_update_hash = vram_hash;
 	}
-	texture_update_flag = (texture_update_flag + 1) % TEX_HASH_CHECK_FRAMES;
+	texture_frame_count = FrameCount;
 	
 	bool rc = dirty || texture_hash_dirty
 #else
