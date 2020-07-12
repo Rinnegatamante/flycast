@@ -74,8 +74,10 @@ void TextureCacheData::UploadToGPU(int width, int height, u8 *temp_tex_buffer, b
 		}
 		
 		glTexImage2D(GL_TEXTURE_2D, 0,comps, width, height, 0, comps, gltype, temp_tex_buffer);
+#if 0
 		if (mipmapped)
 			glGenerateMipmap(GL_TEXTURE_2D);
+#endif
 	}
 	else {
 		#if FEAT_HAS_SOFTREND
