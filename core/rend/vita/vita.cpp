@@ -42,14 +42,14 @@ float scale_x, scale_y;
 
 static const char* VertexShaderSource = R"(void main(
 	float3 in_pos,
-	float4 in_base,
-	float4 in_offs,
-	float2 in_uv,
+	fixed4 in_base,
+	fixed4 in_offs,
+	half2 in_uv,
 	uniform float4 scale,
 	uniform float extra_depth_scale,
-	float4 out vtx_base : COLOR0,
-	float4 out vtx_offs : COLOR1,
-	float2 out vtx_uv : TEXCOORD0,
+	fixed4 out vtx_base : COLOR0,
+	fixed4 out vtx_offs : COLOR1,
+	half2 out vtx_uv : TEXCOORD0,
 	float4 out vpos : POSITION)
 {
 	vtx_base=in_base;
@@ -79,12 +79,12 @@ R"(#define cp_AlphaTest %d
 #define pp_TriLinear %d
 #define PI 3.1415926
 
-float fog_mode2(float w, float density, sampler2D table)
+fixed fog_mode2(float w, float density, sampler2D table)
 {
 	float z = clamp(w * density, 1.0, 255.9999);
-	float exp_v = floor(log2(z));
+	half exp_v = floor(log2(z));
 	float m = z * 16.0 / pow(2.0, exp_v) - 16.0;
-	float idx = floor(m) + exp_v * 16.0 + 0.5;
+	half idx = floor(m) + exp_v * 16.0 + 0.5;
 	float4 fog_coef = tex2D(table, float2(idx / 128.0, 0.75 - (m - floor(m)) / 2.0));
 	return fog_coef.a;
 }
@@ -99,20 +99,20 @@ float4 fog_clamp(float4 col, float4 clamp_min, float4 clamp_max)
 }
 
 void main(
-	float4 vtx_base : COLOR0,
-	float4 vtx_offs : COLOR1,
-	float2 vtx_uv : TEXCOORD0,
+	fixed4 vtx_base : COLOR0,
+	fixed4 vtx_offs : COLOR1,
+	half2 vtx_uv : TEXCOORD0,
 	float4 coords : WPOS,
-	uniform float cp_AlphaTestValue,
-	uniform float4 pp_ClipTest,
-	uniform float3 sp_FOG_COL_RAM,
-	uniform float3 sp_FOG_COL_VERT,
+	uniform half cp_AlphaTestValue,
+	uniform half4 pp_ClipTest,
+	uniform half3 sp_FOG_COL_RAM,
+	uniform half3 sp_FOG_COL_VERT,
 	uniform float sp_FOG_DENSITY,
 	uniform sampler2D tex : TEXUNIT0,
 	uniform sampler2D fog_table : TEXUNIT1,
-	uniform float trilinear_alpha,
-	uniform float4 fog_clamp_min,
-	uniform float4 fog_clamp_max,
+	uniform half trilinear_alpha,
+	uniform half4 fog_clamp_min,
+	uniform half4 fog_clamp_max,
 	float4 out frag_clr : COLOR,
 	float out frag_depth : DEPTH
 	)
@@ -130,21 +130,21 @@ void main(
 		discard;
 	#endif
 	
-	float4 color = vtx_base;
+	fixed4 color = vtx_base;
 	#if pp_UseAlpha == 0
 	color.a = 1.0f;
 	#endif
 	#if pp_FogCtrl == 3
-	color = float4(sp_FOG_COL_RAM.rgb , fog_mode2(coords.w, sp_FOG_DENSITY, fog_table));
+	color = fixed4(sp_FOG_COL_RAM.rgb , fog_mode2(coords.w, sp_FOG_DENSITY, fog_table));
 	#endif
 	#if pp_Texture==1
-	float4 texcol=tex2D(tex, vtx_uv);
+	fixed4 texcol=tex2D(tex, vtx_uv);
 		
 		#if pp_BumpMap == 1
 	float s = PI / 2.0 * (texcol.a * 15.0 * 16.0 + texcol.r * 15.0) / 255.0;
 	float r = 2.0 * PI * (texcol.g * 15.0 * 16.0 + texcol.b * 15.0) / 255.0;
 	texcol.a = clamp(vtx_offs.a + vtx_offs.r * sin(s) + vtx_offs.g * cos(s) * cos(r - 2.0 * PI * vtx_offs.b), 0.0, 1.0);
-	texcol.rgb = float3(1.0, 1.0, 1.0);	
+	texcol.rgb = fixed3(1.0, 1.0, 1.0);	
 		#else
 			#if pp_IgnoreTexA==1
 	texcol.a=1.0;	
