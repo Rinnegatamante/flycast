@@ -267,8 +267,10 @@ void libCore_vramlock_Unlock_block(vram_block* block)
 
 void libCore_vramlock_Unlock_block_wb(vram_block* block)
 {
+#ifndef NO_MMU
 	if (mmu_enabled())
 		vmem32_unprotect_vram(block->start, block->len);
+#endif
 	vramlock_list_remove(block);
 	free(block);
 }

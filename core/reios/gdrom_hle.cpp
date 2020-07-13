@@ -55,7 +55,9 @@ static void GDROM_HLE_ReadTOC()
 	for (int i = 0; i < 102; i++) {
 		toc[i] = SWAP32(toc[i]);
 	}
+#ifndef NO_MMU
 	if (!mmu_enabled())
+#endif
 	{
 		u32* pDst = (u32*)GetMemPtr(dest, sizeof(toc));
 		if (pDst != NULL)
@@ -80,7 +82,9 @@ static void read_sectors_to(u32 addr, u32 sector, u32 count)
 	else
 		// Small transfers: Max G1 bus rate: 50 MHz x 16 bits
 		gd_hle_state.xfer_end_time = sh4_sched_now64() + 5 * 2048 * 2;
+#ifndef NO_MMU
 	if (!virtual_addr || !mmu_enabled())
+#endif
 	{
 		u8 * pDst = GetMemPtr(addr, 0);
 
@@ -173,9 +177,11 @@ static void GDCC_HLE_GETSCD() {
 	gd_get_subcode(format, gd_hle_state.cur_sector, scd);
 	verify(scd[3] == size);
 
+#ifdef NO_MMU
 	if (!mmu_enabled() && GetMemPtr(dest, size) != NULL)
 		memcpy(GetMemPtr(dest, size), scd, size);
 	else
+#endif
 	{
 		for (int i = 0; i < size; i++)
 			WriteMem8(dest++, scd[i]);

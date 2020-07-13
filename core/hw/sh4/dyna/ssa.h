@@ -226,6 +226,7 @@ private:
 							&& (op.flags & 0x7f) <= 4)
 					{
 						bool doit = false;
+#ifndef NO_MMU
 						if (mmu_enabled())
 						{
 							// Only for user space addresses
@@ -236,6 +237,7 @@ private:
 								doit = IsOnRam(op.rs1._imm);
 						}
 						else
+#endif
 							doit = IsOnRam(op.rs1._imm);
 						if (doit)
 						{
@@ -321,26 +323,36 @@ private:
 		{
 			shil_opcode& op = block->oplist[opnum];
 			bool dead_code = false;
-
-			if (op.op == shop_ifb || (mmu_enabled() && (op.op == shop_readm || op.op == shop_writem)))
+			
+			switch (op.op)
 			{
-				// if mmu enabled, mem accesses can throw an exception
-				// so last_versions must be reset so the regs are correctly saved beforehand
+			case shop_ifb:
 				memset(last_versions, -1, sizeof(last_versions));
 				continue;
-			}
-			if (op.op == shop_pref)
-			{
+#ifndef NO_MMU
+			case shop_readm:
+			case shop_writem:
+				if (mmu_enabled())
+				{
+					// if mmu enabled, mem accesses can throw an exception
+					// so last_versions must be reset so the regs are correctly saved beforehand
+					memset(last_versions, -1, sizeof(last_versions));
+					continue;
+				}
+				break;
+#endif
+			case shop_pref:
 				if (op.rs1.is_imm() && (op.rs1.imm_value() & 0xFC000000) != 0xE0000000)
 					dead_code = true;
+#ifndef NO_MMU
 				else if (mmu_enabled())
 				{
 					memset(last_versions, -1, sizeof(last_versions));
 					continue;
 				}
-			}
-			if (op.op == shop_sync_sr)
-			{
+#endif
+				break;
+			case shop_sync_sr:
 				last_versions[reg_sr_T] = -1;
 				last_versions[reg_sr_status] = -1;
 				last_versions[reg_old_sr_status] = -1;
@@ -349,14 +361,14 @@ private:
 				for (int i = reg_r0_Bank; i <= reg_r7_Bank; i++)
 					last_versions[i] = -1;
 				continue;
-			}
-			if (op.op == shop_sync_fpscr)
-			{
+			case shop_sync_fpscr:
 				last_versions[reg_fpscr] = -1;
 				last_versions[reg_old_fpscr] = -1;
 				for (int i = reg_fr_0; i <= reg_xf_15; i++)
 					last_versions[i] = -1;
 				continue;
+			default:
+				break;
 			}
 
 			if (op.rd.is_reg())

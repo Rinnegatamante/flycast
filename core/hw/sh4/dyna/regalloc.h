@@ -364,7 +364,11 @@ struct RegAlloc
 	
 	bool IsExceptionOp(shil_opcode* op)
 	{
+#ifndef NO_MMU
 		return mmu_enabled() && (op->op == shop_readm || op->op == shop_writem || op->op == shop_pref);
+#else
+		return false;
+#endif
 	}
 
 	bool IsFlushOp(RuntimeBlockInfo* block, int opid)

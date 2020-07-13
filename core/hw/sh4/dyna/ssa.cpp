@@ -65,22 +65,68 @@ bool SSAOptimizer::ExecuteConstOp(shil_opcode* op)
 			rd = shil_opcl_sub::f1::impl(rs1, rs2);
 			break;
 		case shop_adc:
+			{
+				u64 v = shil_opcl_adc::f1::impl(rs1, rs2, rs3);
+				rd = (u32)v;
+				rd2 = (u32)(v >> 32);
+
+				shil_param op2_rd = shil_param(op->rd2._reg);
+				op2_rd.version[0] = op->rd2.version[0];
+				InsertMov32Op(op2_rd, shil_param(FMT_IMM, rd2));
+
+				// the previous insert might have invalidated our reference
+				op = &block->oplist[opnum - 1];
+				op->rd2 = shil_param();
+			}
+			break;
 		case shop_sbc:
+			{
+				u64 v = shil_opcl_sbc::f1::impl(rs1, rs2, rs3);
+				rd = (u32)v;
+				rd2 = (u32)(v >> 32);
+
+				shil_param op2_rd = shil_param(op->rd2._reg);
+				op2_rd.version[0] = op->rd2.version[0];
+				InsertMov32Op(op2_rd, shil_param(FMT_IMM, rd2));
+
+				// the previous insert might have invalidated our reference
+				op = &block->oplist[opnum - 1];
+				op->rd2 = shil_param();
+			}
+			break;
 		case shop_negc:
+			{
+				u64 v = shil_opcl_negc::f1::impl(rs1, rs2);
+				rd = (u32)v;
+				rd2 = (u32)(v >> 32);
+
+				shil_param op2_rd = shil_param(op->rd2._reg);
+				op2_rd.version[0] = op->rd2.version[0];
+				InsertMov32Op(op2_rd, shil_param(FMT_IMM, rd2));
+
+				// the previous insert might have invalidated our reference
+				op = &block->oplist[opnum - 1];
+				op->rd2 = shil_param();
+			}
+			break;
 		case shop_rocl:
+			{
+				u64 v = shil_opcl_rocl::f1::impl(rs1, rs2);
+				rd = (u32)v;
+				rd2 = (u32)(v >> 32);
+
+				shil_param op2_rd = shil_param(op->rd2._reg);
+				op2_rd.version[0] = op->rd2.version[0];
+				InsertMov32Op(op2_rd, shil_param(FMT_IMM, rd2));
+
+				// the previous insert might have invalidated our reference
+				op = &block->oplist[opnum - 1];
+				op->rd2 = shil_param();
+			}
+			break;
 		case shop_rocr:
 			{
-				u64 v;
-				if (op->op == shop_adc)
-					v = shil_opcl_adc::f1::impl(rs1, rs2, rs3);
-				else if (op->op == shop_sbc)
-					v = shil_opcl_sbc::f1::impl(rs1, rs2, rs3);
-				else if (op->op == shop_rocl)
-					v = shil_opcl_rocl::f1::impl(rs1, rs2);
-				else if (op->op == shop_rocr)
-					v = shil_opcl_rocr::f1::impl(rs1, rs2);
-				else
-					v = shil_opcl_negc::f1::impl(rs1, rs2);
+				u64 v = shil_opcl_rocr::f1::impl(rs1, rs2);
 				rd = (u32)v;
 				rd2 = (u32)(v >> 32);
 
@@ -139,13 +185,23 @@ bool SSAOptimizer::ExecuteConstOp(shil_opcode* op)
 			rd = shil_opcl_mul_s16::f1::impl(rs1, rs2);
 			break;
 		case shop_mul_u64:
+			{
+				u64 v = shil_opcl_mul_u64::f1::impl(rs1, rs2);
+				rd = (u32)v;
+				rd2 = (u32)(v >> 32);
+
+				shil_param op2_rd =  shil_param(op->rd2._reg);
+				op2_rd.version[0] = op->rd2.version[0];
+				InsertMov32Op(op2_rd, shil_param(FMT_IMM, rd2));
+
+				// the previous insert might have invalidated our reference
+				op = &block->oplist[opnum - 1];
+				op->rd2 = shil_param();
+			}
+			break;
 		case shop_mul_s64:
 			{
-				u64 v;
-				if (op->op == shop_mul_u64)
-					v = shil_opcl_mul_u64::f1::impl(rs1, rs2);
-				else
-					v = shil_opcl_mul_s64::f1::impl(rs1, rs2);
+				u64 v = shil_opcl_mul_s64::f1::impl(rs1, rs2);
 				rd = (u32)v;
 				rd2 = (u32)(v >> 32);
 
@@ -191,11 +247,23 @@ bool SSAOptimizer::ExecuteConstOp(shil_opcode* op)
 		case shop_xtrct:
 			rd = shil_opcl_xtrct::f1::impl(rs1, rs2);
 			break;
-
 		case shop_div32u:
+			{
+				u64 res = shil_opcl_div32u::f1::impl(rs1, rs2, rs3);
+				rd = (u32)res;
+				constprop_values[RegValue(op->rd, 1)] = res >> 32;
+
+				shil_param op2_rd =  shil_param((Sh4RegType)(op->rd._reg + 1));
+				op2_rd.version[0] = op->rd.version[1];
+				InsertMov32Op(op2_rd, shil_param(FMT_IMM, res >> 32));
+
+				// the previous insert might have invalidated our reference
+				op = &block->oplist[opnum - 1];
+			}
+			break;
 		case shop_div32s:
 			{
-				u64 res =  op->op == shop_div32u ? shil_opcl_div32u::f1::impl(rs1, rs2, rs3) : shil_opcl_div32s::f1::impl(rs1, rs2, rs3);
+				u64 res = shil_opcl_div32s::f1::impl(rs1, rs2, rs3);
 				rd = (u32)res;
 				constprop_values[RegValue(op->rd, 1)] = res >> 32;
 
@@ -210,7 +278,6 @@ bool SSAOptimizer::ExecuteConstOp(shil_opcode* op)
 		case shop_div32p2:
 			rd = shil_opcl_div32p2::f1::impl(rs1, rs2, rs3);
 			break;
-
 		case shop_jdyn:
 			{
 				verify(BET_GET_CLS(block->BlockType) == BET_CLS_Dynamic);
@@ -353,7 +420,6 @@ bool SSAOptimizer::ExecuteConstOp(shil_opcode* op)
 		case shop_fsetgt:
 			rd = shil_opcl_fsetgt::f1::impl(reinterpret_cast<f32&>(rs1), reinterpret_cast<f32&>(rs2));
 			break;
-
 		default:
 			ERROR_LOG(DYNAREC, "unhandled constant op %d", op->op);
 			die("unhandled constant op");

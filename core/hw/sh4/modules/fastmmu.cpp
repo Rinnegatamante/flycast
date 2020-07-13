@@ -188,8 +188,11 @@ bool UTLB_Sync(u32 entry)
 
 	tlb_entry.Address.VPN = lru_address >> 10;
 	cache_entry(tlb_entry);
-
+#ifndef NO_MMU
+	if ((tlb_entry.Address.VPN & (0xFC000000 >> 10)) == (0xE0000000 >> 10))
+#else
 	if (!mmu_enabled() && (tlb_entry.Address.VPN & (0xFC000000 >> 10)) == (0xE0000000 >> 10))
+#endif
 	{
 		// Used when FullMMU is off
 		u32 vpn_sq = ((tlb_entry.Address.VPN & 0x7FFFF) >> 10) & 0x3F;//upper bits are always known [0xE0/E1/E2/E3]

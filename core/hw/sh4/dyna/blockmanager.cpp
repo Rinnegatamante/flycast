@@ -273,7 +273,9 @@ static void bm_LockPage(u32 addr)
 	addr = addr & (RAM_MASK - PAGE_MASK);
 	if (_nvmem_enabled())
 	{
+#ifndef NO_MMU
 		if (!mmu_enabled() || !_nvmem_4gb_space())
+#endif
 			mem_region_lock(virt_ram_base + 0x0C000000 + addr, PAGE_SIZE);
 		if (_nvmem_4gb_space())
 		{
@@ -293,7 +295,9 @@ static void bm_UnlockPage(u32 addr)
 	addr = addr & (RAM_MASK - PAGE_MASK);
 	if (_nvmem_enabled())
 	{
+#ifndef NO_MMU
 		if (!mmu_enabled() || !_nvmem_4gb_space())
+#endif
 			mem_region_unlock(virt_ram_base + 0x0C000000 + addr, PAGE_SIZE);
 		if (_nvmem_4gb_space())
 		{
@@ -634,10 +638,12 @@ bool bm_RamWriteAccess(void *p)
 				return false;
 		}
 		u32 addr = (u8*)p - virt_ram_base;
+#ifndef NO_MMU
 		if (mmu_enabled() && _nvmem_4gb_space() && (addr & 0x80000000) == 0)
 			// If mmu enabled, let vmem32 manage user space
 			// shouldn't be necessary since it's called first
 			return false;
+#endif
 		if (!IsOnRam(addr) || ((addr >> 29) > 0 && (addr >> 29) < 4))	// system RAM is not mapped to 20, 40 and 60 because of laziness
 			return false;
 		bm_RamWriteAccess(addr);

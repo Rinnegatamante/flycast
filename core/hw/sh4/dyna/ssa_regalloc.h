@@ -53,16 +53,22 @@ public:
 	void OpBegin(shil_opcode* op, int opid)
 	{
 		opnum = opid;
-		if (op->op == shop_ifb)
+		switch (op->op)
 		{
+		case shop_ifb:
 			FlushAllRegs(true);
-		}
-		else if (mmu_enabled() && (op->op == shop_readm || op->op == shop_writem || op->op == shop_pref))
-		{
-			FlushAllRegs(false);
-		}
-		else if (op->op == shop_sync_sr)
-		{
+			break;
+#ifndef NO_MMU
+		case shop_readm:
+		case shop_writem:
+		case shop_pref:
+			if (mmu_enabled())
+			{
+				FlushAllRegs(false);
+			}
+			break;
+#endif
+		case shop_sync_sr:
 			//FlushReg(reg_sr_T, true);
 			FlushReg(reg_sr_status, true);
 			FlushReg(reg_old_sr_status, true);
@@ -70,14 +76,17 @@ public:
 				FlushReg((Sh4RegType)i, true);
 			for (int i = reg_r0_Bank; i <= reg_r7_Bank; i++)
 				FlushReg((Sh4RegType)i, true);
-		}
-		else if (op->op == shop_sync_fpscr)
-		{
+			break;
+		case shop_sync_fpscr:
 			FlushReg(reg_fpscr, true);
 			FlushReg(reg_old_fpscr, true);
 			for (int i = reg_fr_0; i <= reg_xf_15; i++)
 				FlushReg((Sh4RegType)i, true);
+			break;
+		default:
+			break;
 		}
+		
 		// Flush regs used by vector ops
 		if (op->rs1.is_reg() && op->rs1.count() > 1)
 		{
@@ -401,13 +410,30 @@ private:
 			shil_opcode* op = &block->oplist[i];
 			// if a subsequent op needs all or some regs flushed to mem
 			// TODO we could look at the ifb op to optimize what to flush
-			if (op->op == shop_ifb || (mmu_enabled() && (op->op == shop_readm || op->op == shop_writem || op->op == shop_pref)))
+			switch (op->op)
+			{
+			case shop_ifb:
 				return true;
-			if (op->op == shop_sync_sr && (/*reg == reg_sr_T ||*/ reg == reg_sr_status || reg == reg_old_sr_status || (reg >= reg_r0 && reg <= reg_r7)
-					|| (reg >= reg_r0_Bank && reg <= reg_r7_Bank)))
-				return true;
-			if (op->op == shop_sync_fpscr && (reg == reg_fpscr || reg == reg_old_fpscr || (reg >= reg_fr_0 && reg <= reg_xf_15)))
-				return true;
+#ifndef NO_MMU
+			case shop_readm:
+			case shop_writem:
+			case shop_pref:
+				if (mmu_enabled())
+					return true;
+				break;
+#endif
+			case shop_sync_sr:
+				if (/*reg == reg_sr_T ||*/ reg == reg_sr_status || reg == reg_old_sr_status || (reg >= reg_r0 && reg <= reg_r7)
+					|| (reg >= reg_r0_Bank && reg <= reg_r7_Bank))
+					return true;
+				break;
+			case shop_sync_fpscr:
+				if (reg == reg_fpscr || reg == reg_old_fpscr || (reg >= reg_fr_0 && reg <= reg_xf_15))
+					return true;
+				break;
+			default:
+				break;
+			}
 			// if reg is used by a subsequent vector op that doesn't use reg allocation
 			if (UsesReg(op, reg, version, true))
 				return true;

@@ -62,6 +62,14 @@ __attribute__((format(printf, 5, 6)))
 #endif  // loglevel
 #endif  // logging
 
+#if defined(VITA) && !defined(DEBUGFAST)
+#define GENERIC_LOG(t, ...)
+#define ERROR_LOG(t, ...)
+#define WARN_LOG(t, ...)
+#define NOTICE_LOG(t, ...)
+#define INFO_LOG(t, ...)
+#define DEBUG_LOG(t, ...)
+#else
 // Let the compiler optimize this out
 #define GENERIC_LOG(t, v, ...)                                                                     \
 		do                                                                                               \
@@ -95,3 +103,4 @@ __attribute__((format(printf, 5, 6)))
 		{                                                                                                \
 			GENERIC_LOG(LogTypes::t, LogTypes::LDEBUG, __VA_ARGS__);                                       \
 		} while (0)
+#endif

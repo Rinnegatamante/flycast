@@ -284,6 +284,7 @@ u32 DYNACALL rdv_DoInterrupts(void* block_cpde)
 DynarecCodeEntryPtr DYNACALL rdv_BlockCheckFail(u32 addr)
 {
 	u32 blockcheck_failures = 0;
+#ifndef NO_MMU
 	if (mmu_enabled())
 	{
 		RuntimeBlockInfoPtr block = bm_GetBlock(addr);
@@ -297,6 +298,7 @@ DynarecCodeEntryPtr DYNACALL rdv_BlockCheckFail(u32 addr)
 		bm_DiscardBlock(block.get());
 	}
 	else
+#endif
 	{
 		next_pc = addr;
 		recSh4_ClearCache();
@@ -348,8 +350,11 @@ void* DYNACALL rdv_LinkBlock(u8* code,u32 dpc)
 	}
 
 	DynarecCodeEntryPtr rv = rdv_FindOrCompile();  // Returns rx ptr
-
+#ifdef NO_MMU
+	if (!stale_block)
+#else
 	if (!mmu_enabled() && !stale_block)
+#endif
 	{
 		if (bcls == BET_CLS_Dynamic)
 		{

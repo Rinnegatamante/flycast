@@ -768,7 +768,11 @@ static bool dec_generic(u32 op)
 			bool update_after=false;
 			if ((s32)e<0)
 			{
+#ifdef NO_MMU
+				if (rs1._reg!=rs2._reg) //reg shouldn't be updated if its written
+#else
 				if (rs1._reg!=rs2._reg && !mmu_enabled()) //reg shouldn't be updated if its written
+#endif
 				{
 					Emit(shop_sub,rs1,rs1,mk_imm(-e));
 				}
@@ -960,8 +964,12 @@ bool dec_DecodeBlock(RuntimeBlockInfo* rbi,u32 max_cycles)
 	
 	blk->guest_opcodes=0;
 	// If full MMU, don't allow the block to extend past the end of the current 4K page
+#ifdef NO_MMU
+	u32 max_pc = 0xFFFFFFFF;
+#else
 	u32 max_pc = mmu_enabled() ? ((state.cpu.rpc >> 12) + 1) << 12 : 0xFFFFFFFF;
-	
+#endif
+
 	for(;;)
 	{
 		switch(state.NextOp)
@@ -988,7 +996,9 @@ bool dec_DecodeBlock(RuntimeBlockInfo* rbi,u32 max_cycles)
 					else
 					{
 						blk->guest_opcodes++;
+#ifndef NO_MMU
 						if (!mmu_enabled())
+#endif
 						{
 #ifndef VITA
 							if (op>=0xF000)
@@ -997,10 +1007,12 @@ bool dec_DecodeBlock(RuntimeBlockInfo* rbi,u32 max_cycles)
 #endif
 								blk->guest_cycles+=CPU_RATIO;
 						}
+#ifndef NO_MMU
 						else
 						{
 							blk->guest_cycles += max((int)OpDesc[op]->LatencyCycles, 1);
 						}
+#endif
 						if (OpDesc[op]->IsFloatingPoint())
 						{
 							if (sr.FD == 1)
@@ -1078,7 +1090,11 @@ _end:
 	if (settings.dynarec.idleskip)
 	{
 		//Experimental hash-id based idle skip
+#ifdef NO_MMU
+		if (strstr(idle_hash, blk->hash()))
+#else
 		if (!mmu_enabled() && strstr(idle_hash, blk->hash()))
+#endif
 		{
 			//printf("IDLESKIP: %08X reloc match %s\n",blk->addr,blk->hash());
 			blk->guest_cycles=max_cycles*100;
@@ -1121,10 +1137,11 @@ _end:
 	{
 		blk->guest_cycles*=1.5;
 	}
+#ifndef NO_MMU
 	// Win CE boost
 	if (mmu_enabled())
 		blk->guest_cycles *= 1.5f;
-
+#endif
 	//make sure we don't use wayy-too-many cycles
 	blk->guest_cycles=min(blk->guest_cycles,max_cycles);
 	//make sure we don't use wayy-too-few cycles
