@@ -110,19 +110,6 @@ static void dec_DynamicSet(u32 regbase,u32 offs=0)
 
 static void dec_End(u32 dst,BlockEndType flags,bool delay)
 {
-	if (state.ngen.OnlyDynamicEnds && flags == BET_StaticJump)
-	{
-		Emit(shop_mov32,mk_reg(reg_nextpc),mk_imm(dst));
-		dec_DynamicSet(reg_nextpc);
-		dec_End(0xFFFFFFFF,BET_DynamicJump,delay);
-		return;
-	}
-
-	if (state.ngen.OnlyDynamicEnds)
-	{
-		verify(flags == BET_DynamicJump);
-	}
-
 	state.BlockType=flags;
 	state.NextOp=delay?NDO_Delayslot:NDO_End;
 	state.DelayOp=NDO_End;
@@ -750,7 +737,7 @@ static bool dec_generic(u32 op)
 		Emit(natop,rs1,rs2,mk_imm(e));
 		break;
 
-	case DM_BinaryOp://d=d op s
+	case DM_BinaryOp: //d=d op s
 		if (e&1)
 			Emit(natop,rs1,rs1,rs2,0,rs3);
 		else
@@ -970,7 +957,6 @@ bool dec_DecodeBlock(RuntimeBlockInfo* rbi,u32 max_cycles)
 {
 	blk=rbi;
 	state_Setup(blk->vaddr, blk->fpu_cfg);
-	ngen_GetFeatures(&state.ngen);
 	
 	blk->guest_opcodes=0;
 	// If full MMU, don't allow the block to extend past the end of the current 4K page
@@ -1004,9 +990,11 @@ bool dec_DecodeBlock(RuntimeBlockInfo* rbi,u32 max_cycles)
 						blk->guest_opcodes++;
 						if (!mmu_enabled())
 						{
+#ifndef VITA
 							if (op>=0xF000)
 								blk->guest_cycles+=0;
 							else
+#endif
 								blk->guest_cycles+=CPU_RATIO;
 						}
 						else
@@ -1026,9 +1014,9 @@ bool dec_DecodeBlock(RuntimeBlockInfo* rbi,u32 max_cycles)
 						}
 
 						verify(!(state.cpu.is_delayslot && OPCODE_SETPC(OpDesc[op]->type)));
-						if (state.ngen.OnlyDynamicEnds || !OpDesc[op]->rec_oph)
+						if (!OpDesc[op]->rec_oph)
 						{
-							if (state.ngen.InterpreterFallback || !dec_generic(op))
+							if (!dec_generic(op))
 							{
 								dec_fallback(op);
 								if (OPCODE_SETPC(OpDesc[op]->type))

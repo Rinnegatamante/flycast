@@ -102,9 +102,7 @@ extern void (*ngen_ResetBlocks)();
 extern void (*ngen_FailedToFindBlock)();
 //the dynarec mainloop
 void ngen_mainloop(void* cntx);
-//ngen features
 
-void ngen_GetFeatures(ngen_features* dst);
 void ngen_HandleException();
 
 //Canonical callback interface

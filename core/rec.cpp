@@ -106,9 +106,3 @@ void ngen_init(void)
          break;
    }
 }
-
-void ngen_GetFeatures(ngen_features* dst)
-{
-	dst->InterpreterFallback = false;
-	dst->OnlyDynamicEnds = false;
-}
