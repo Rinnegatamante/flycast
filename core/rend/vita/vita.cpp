@@ -292,10 +292,10 @@ GLuint gl_CompileAndLink(const char* VertexShader, const char* FragmentShader)
 	glAttachShader(program, ps);
 	
 	/* Bind vertex attribute to VBO inputs */
-	vglBindPackedAttribLocation(program, 0, "in_pos" ,           3, GL_FLOAT        ,                 0, sizeof(float) * 11);
-	vglBindPackedAttribLocation(program, 1, "in_base",           4, GL_UNSIGNED_BYTE, sizeof(float) * 3, sizeof(float) * 11);
-	vglBindPackedAttribLocation(program, 2, "in_offs",           4, GL_UNSIGNED_BYTE, sizeof(float) * 4, sizeof(float) * 11);
-	vglBindPackedAttribLocation(program, 3, "in_uv"  ,           2, GL_FLOAT        , sizeof(float) * 5, sizeof(float) * 11);
+	vglBindPackedAttribLocation(program, "in_pos" ,           3, GL_FLOAT        ,                 0, sizeof(float) * 11);
+	vglBindPackedAttribLocation(program, "in_base",           4, GL_UNSIGNED_BYTE, sizeof(float) * 3, sizeof(float) * 11);
+	vglBindPackedAttribLocation(program, "in_offs",           4, GL_UNSIGNED_BYTE, sizeof(float) * 4, sizeof(float) * 11);
+	vglBindPackedAttribLocation(program, "in_uv"  ,           2, GL_FLOAT        , sizeof(float) * 5, sizeof(float) * 11);
 	
 	glLinkProgram(program);
 	
