@@ -677,6 +677,9 @@ public:
 	u32 palette_hash;			// Palette hash at time of last update
 	u32 vq_codebook;            // VQ quantizers table for compressed textures
 	u32 texture_hash;			// xxhash of texture data, used for custom textures
+	u32 texture_update_hash = 0;// xxhash of texture data, used for textures updating when mprotect is not available
+	bool texture_hash_dirty;    // Flag for when a texture update should be performed when mprotect is not available
+	u8 texture_update_flag;     // Flag for when a texture update check should be performed when mprotect is not available
 	u32 old_texture_hash;		// legacy hash
 	u8* custom_image_data;		// loaded custom image data
 	u32 custom_width;

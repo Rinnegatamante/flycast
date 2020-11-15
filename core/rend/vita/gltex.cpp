@@ -51,7 +51,7 @@ void TextureCacheData::UploadToGPU(int width, int height, u8 *temp_tex_buffer, b
 	{
 		//upload to OpenGL !
 		glcache.BindTexture(GL_TEXTURE_2D, texID);
-		GLuint comps = GL_RGBA;
+		GLuint comps = tex_type == TextureType::_8 ? gl.single_channel_format : GL_RGBA;
 		GLuint gltype;
 		switch (tex_type)
 		{
@@ -68,16 +68,20 @@ void TextureCacheData::UploadToGPU(int width, int height, u8 *temp_tex_buffer, b
 		case TextureType::_8888:
 			gltype = GL_UNSIGNED_BYTE;
 			break;
+		case TextureType::_8:
+			gltype = GL_UNSIGNED_BYTE;
+			break;
 		default:
 			die("Unsupported texture type");
 			break;
 		}
 		
 		glTexImage2D(GL_TEXTURE_2D, 0,comps, width, height, 0, comps, gltype, temp_tex_buffer);
+		
 		if (mipmapped)
 			glGenerateMipmap(GL_TEXTURE_2D);
-	}
-	else {
+		
+	} else {
 		#if FEAT_HAS_SOFTREND
 			/*
 			if (tex_type == TextureType::_565)
@@ -162,9 +166,6 @@ u64 gl_GetTexture(TSP tsp, TCW tcw)
       TexCacheHits++;
    }
 
-	/* Update state for opts/stuff */
-	tf->Lookups++;
-
 	/* Return gl texture */
 	return tf->texID;
 }
@@ -182,9 +183,6 @@ text_info raw_GetTexture(TSP tsp, TCW tcw)
 	//update if needed
 	if (tf->NeedsUpdate())
 		tf->Update();
-
-	//update state for opts/stuff
-	tf->Lookups++;
 
 	//return gl texture
 	rv.height = tf->h;

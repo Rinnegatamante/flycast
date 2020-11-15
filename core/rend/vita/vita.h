@@ -4,9 +4,13 @@
 #include <libretro.h>
 #include "rend/rend.h"
 #include "rend/TexCache.h"
+#include "rend/transform_matrix.h"
+#include "rend/sorter.h"
+#include "rend/tileclip.h"
 #include <vitaGL.h>
 #include "glcache.h"
-
+#include <glm/glm.hpp>
+	
 #ifndef TEXTURE_MAX_ANISOTROPY_EXT
 #define TEXTURE_MAX_ANISOTROPY_EXT 0x84FE
 #endif
@@ -34,25 +38,30 @@
 
 //vertex types
 extern u32 gcflip;
-extern float scale_x, scale_y;
+extern glm::mat4 ViewportMatrix;
 
 void DrawStrips(void);
 
 struct PipelineShader
 {
 	GLuint program;
-   GLuint scale,depth_scale;
-   GLuint extra_depth_scale;
-   GLuint pp_ClipTest,cp_AlphaTestValue;
- 	GLuint sp_FOG_COL_RAM,sp_FOG_COL_VERT,sp_FOG_DENSITY;
-   GLuint trilinear_alpha;
-   GLuint fog_clamp_min, fog_clamp_max;
-   //
-   u32 cp_AlphaTest; s32 pp_ClipTestMode;
- 	u32 pp_Texture, pp_UseAlpha, pp_IgnoreTexA, pp_ShadInstr, pp_Offset, pp_FogCtrl;
-   bool pp_Gouraud, pp_BumpMap;
-   bool fog_clamping;
-   bool trilinear;
+	GLint depth_scale;
+	GLint pp_ClipTest,cp_AlphaTestValue;
+	GLint sp_FOG_COL_RAM,sp_FOG_COL_VERT,sp_FOG_DENSITY;
+	GLint trilinear_alpha;
+	GLint fog_clamp_min, fog_clamp_max;
+	GLint normal_matrix;
+	GLint palette_index;
+	
+	//
+	bool cp_AlphaTest, pp_InsideClipping;
+	bool pp_Texture, pp_UseAlpha, pp_IgnoreTexA;
+	u32 pp_ShadInstr;
+	bool pp_Offset, pp_FogCtrl;
+	bool pp_BumpMap;
+	bool fog_clamping;
+	bool trilinear;
+	bool palette;
 };
 
 
@@ -63,10 +72,9 @@ struct gl_ctx
 	{
 		GLuint program;
 
-		GLuint scale,depth_scale;
-      GLuint extra_depth_scale;
-		GLuint sp_ShaderColor;
-
+		GLint depth_scale;
+		GLint sp_ShaderColor;	
+		GLint normal_matrix;
 	} modvol_shader;
 
 	std::unordered_map<u32, PipelineShader> shaders;
@@ -89,7 +97,7 @@ struct gl_ctx
    int gl_major;
    int gl_minor;
    bool is_gles;
-   GLuint fog_image_format;
+   GLuint single_channel_format;
    GLenum index_type;
    bool stencil_present;
    f32 max_anisotropy;
@@ -112,6 +120,7 @@ enum ModifierVolumeMode { Xor, Or, Inclusion, Exclusion, ModeCount };
 
 bool ProcessFrame(TA_context* ctx);
 void UpdateFogTexture(u8 *fog_table, GLenum texture_slot, GLint fog_image_format);
+void UpdatePaletteTexture(GLenum texture_slot);
 text_info raw_GetTexture(TSP tsp, TCW tcw);
 void DoCleanup();
 void SortPParams(int first, int count);
@@ -124,9 +133,9 @@ void ReadRTTBuffer();
 void RenderFramebuffer();
 void DrawFramebuffer(float w, float h);
 
-PipelineShader *GetProgram(u32 cp_AlphaTest, u32 pp_ClipTestMode,
-							u32 pp_Texture, u32 pp_UseAlpha, u32 pp_IgnoreTexA, u32 pp_ShadInstr, u32 pp_Offset,
-							u32 pp_FogCtrl, bool pp_Gouraud, bool pp_BumpMap, bool fog_clamping, bool trilinear);
+PipelineShader *GetProgram(bool cp_AlphaTest, bool pp_ClipTestMode,
+							bool pp_Texture, bool pp_UseAlpha, bool pp_IgnoreTexA, u32 pp_ShadInstr, bool pp_Offset,
+							u32 pp_FogCtrl, bool pp_BumpMap, bool fog_clamping, bool trilinear, bool palette);
 void vertex_buffer_unmap(void);
 
 void findGLVersion();
@@ -143,30 +152,29 @@ void UpdateVmuTexture(int vmu_screen_number);
 extern struct ShaderUniforms_t
 {
 	float PT_ALPHA;
-	float scale_coefs[4];
 	float depth_coefs[4];
-	float extra_depth_scale;
 	float fog_den_float;
 	float ps_FOG_COL_RAM[3];
 	float ps_FOG_COL_VERT[3];
 	float trilinear_alpha;
 	float fog_clamp_min[4];
 	float fog_clamp_max[4];
+	glm::mat4 normal_mat;	
+	struct {	
+		bool enabled;	
+		int x;	
+		int y;	
+		int width;	
+		int height;	
+	} base_clipping;
+	int palette_index;
 
 	void Set(const PipelineShader* s)
 	{
 		if (s->cp_AlphaTestValue!=-1)
 			glUniform1f(s->cp_AlphaTestValue,PT_ALPHA);
-
-		if (s->scale!=-1)
-			glUniform4fv( s->scale, 1, scale_coefs);
-
 		if (s->depth_scale!=-1)
 			glUniform4fv( s->depth_scale, 1, depth_coefs);
-
-		if (s->extra_depth_scale != -1)
-			glUniform1f(s->extra_depth_scale, extra_depth_scale);
-
 		if (s->sp_FOG_DENSITY!=-1)
 			glUniform1f(s->sp_FOG_DENSITY, fog_den_float);
 
@@ -180,12 +188,17 @@ extern struct ShaderUniforms_t
 			glUniform4fv(s->fog_clamp_min, 1, fog_clamp_min);
 		if (s->fog_clamp_max != -1)
 			glUniform4fv(s->fog_clamp_max, 1, fog_clamp_max);
+		if (s->normal_matrix != -1)	
+			glUniformMatrix4fv(s->normal_matrix, 1, GL_FALSE, &normal_mat[0][0]);
+		if (s->palette_index != -1)
+			glUniform1i(s->palette_index, palette_index);
 	}
 
 } ShaderUniforms;
 
-struct TextureCacheData : BaseTextureCacheData
+class TextureCacheData : public BaseTextureCacheData
 {
+public:
 	GLuint texID;   //gl texture
 	u16* pData;
 	virtual std::string GetId() override { return std::to_string(texID); }
