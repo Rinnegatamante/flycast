@@ -526,7 +526,11 @@ void LoadSettings(void)
 {
    settings.dynarec.Enable			= 1;
 	settings.dynarec.idleskip		= 1;
+#ifdef VITA
+	settings.dynarec.unstable_opt	= 1; 
+#else
 	settings.dynarec.unstable_opt	= 0; 
+#endif
    //settings.dynarec.DisableDivMatching       = 0;
 	//disable_nvmem can't be loaded, because nvmem init is before cfg load
 	settings.dynarec.disable_vmem32 = false;
