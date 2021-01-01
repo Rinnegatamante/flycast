@@ -43,6 +43,13 @@ Compression
 extern u32 decoded_colors[3][65536];
 GlTextureCache TexCache;
 
+#ifdef VITA
+	int CollectCleanupThread(unsigned int argc, void *argv) {
+		TexCache.CollectCleanupInstance();
+		return 0;
+	}
+#endif
+
 extern "C" struct retro_hw_render_callback hw_render;
 
 void TextureCacheData::UploadToGPU(int width, int height, u8 *temp_tex_buffer, bool mipmapped, bool mipmapsIncluded)

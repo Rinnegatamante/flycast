@@ -8,6 +8,10 @@
 #include "hw/pvr/ta_structs.h"
 #include "hw/pvr/Renderer_if.h"
 
+#ifdef VITA
+#include <vitaGL.h>
+#endif
+
 extern u8* vq_codebook;
 extern u32 palette_index;
 extern u32 palette16_ram[1024];
@@ -28,12 +32,14 @@ class PixelBuffer
 	pixel_type* p_current_pixel = nullptr;
 
 	u32 pixels_per_line = 0;
-
+#ifdef VITA
+	bool uses_vgl_mem = false;
+#endif
 public:
 	~PixelBuffer()
-   {
+	{
 		deinit();
-   }
+	}
 
 	void init(u32 width, u32 height, bool mipmapped)
 	{
@@ -50,21 +56,39 @@ public:
 			while (width != 0 && height != 0);
 		}
 		p_buffer_start = p_current_line = p_current_pixel = p_current_mipmap = (pixel_type *)malloc(size);
+#ifdef VITA
+		if (!p_buffer_start) {
+			p_buffer_start = p_current_line = p_current_pixel = p_current_mipmap = (pixel_type *)vglForceAlloc(size);
+			uses_vgl_mem = true;
+		}
+#endif
 		this->pixels_per_line = 1;
 	}
 
    void init(u32 width, u32 height)
-   {
-      deinit();
+	{
+		deinit();
 		p_buffer_start = p_current_line = p_current_pixel = p_current_mipmap = (pixel_type *)malloc(width * height * sizeof(pixel_type));
+#ifdef VITA
+		if (!p_buffer_start) {
+			p_buffer_start = p_current_line = p_current_pixel = p_current_mipmap = (pixel_type *)vglForceAlloc(width * height * sizeof(pixel_type));
+			uses_vgl_mem = true;
+		}
+#endif
 		this->pixels_per_line = width;
-   }
+	}
 
    void deinit()
 	{
 		if (p_buffer_start != NULL)
 		{
+#ifdef VITA
+			if (uses_vgl_mem) vglFree(p_buffer_start);
+			else free(p_buffer_start);
+			uses_vgl_mem = false;
+#else
 			free(p_buffer_start);
+#endif
 			p_buffer_start = p_current_mipmap = p_current_line = p_current_pixel = NULL;
 		}
 	}
@@ -726,11 +750,7 @@ struct BaseTextureCacheData
 	void Update();
 	virtual void UploadToGPU(int width, int height, u8 *temp_tex_buffer, bool mipmapped, bool mipmapsIncluded = false) = 0;
 	virtual bool Force32BitTexture(TextureType type) const { 
-#ifdef VITA
-		return true;
-#else
 		return false;
-#endif
 	}
 	void CheckCustomTexture();
 	//true if : dirty or paletted texture and hashes don't match
@@ -738,6 +758,10 @@ struct BaseTextureCacheData
 	virtual bool Delete();
 	virtual ~BaseTextureCacheData() {}
 };
+
+#ifdef VITA
+	int CollectCleanupThread(unsigned int argc, void* argv);
+#endif
 
 template<typename Texture>
 class BaseTextureCache
@@ -776,18 +800,54 @@ public:
 
 		return texture;
 	}
+#ifdef VITA
+	void CollectCleanupInstance()
+	{
+		for (;;) {
+			sceKernelWaitSema(cleanup_mutex, 1, NULL);
+			vector<u64> list;
 
+			for (const auto& pair : cache)
+			{
+				if (FrameCount - pair.second.texture_frame_count < 120)
+					continue;
+
+				if (pair.second.NeedsUpdate())
+					list.push_back(pair.first);
+			}
+
+			for (u64 id : list)
+			{
+				if (cache[id].Delete())
+					cache.erase(id);
+			}
+		}
+	}
+	
+	void CollectCleanup()
+	{
+		if (cleanup_thread == 0xDEADBEEF) {
+			cleanup_mutex = sceKernelCreateSema("Cleanup Mutex", 0, 0, 1, NULL);
+			cleanup_thread = sceKernelCreateThread("Cleanup Thread", &CollectCleanupThread, 0x10000100, 0x10000, 0, 0, NULL);
+			sceKernelStartThread(cleanup_thread, 0, NULL);
+			last_cleanup_frame = FrameCount;
+		}
+		
+		if (FrameCount - last_cleanup_frame > 60) {
+			sceKernelSignalSema(cleanup_mutex, 1);
+			last_cleanup_frame = FrameCount;
+		}
+	}
+#else
 	void CollectCleanup()
 	{
 		vector<u64> list;
-
 		u32 TargetFrame = max((u32)120, FrameCount) - 120;
-
 		for (const auto& pair : cache)
 		{
 			if (pair.second.dirty && pair.second.dirty < TargetFrame)
 				list.push_back(pair.first);
-
+				
 			if (list.size() > 5)
 				break;
 		}
@@ -798,7 +858,7 @@ public:
 				cache.erase(id);
 		}
 	}
-
+#endif
 	void Clear()
 	{
 		for (auto& pair : cache)
@@ -810,6 +870,11 @@ public:
 	}
 
 private:
+#ifdef VITA
+	SceUID cleanup_thread = 0xDEADBEEF;
+	SceUID cleanup_mutex;
+	u32 last_cleanup_frame;
+#endif
 	std::unordered_map<u64, Texture> cache;
 	// Only use TexU and TexV from TSP in the cache key
 	//     TexV : 7, TexU : 7
