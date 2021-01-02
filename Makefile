@@ -308,6 +308,10 @@ else ifeq ($(platform), vita)
 	WITH_DYNAREC = arm
 	HAVE_GENERIC_JIT = 0
 	CORE_DEFINES += -DLOW_END -DNO_MMU
+	
+	ifeq ($(smc),1)
+		CFLAGS += -DVITA_SAFE
+	endif
 
 #########################################
 

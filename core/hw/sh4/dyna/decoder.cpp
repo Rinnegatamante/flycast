@@ -1122,7 +1122,9 @@ _end:
 		blk->guest_cycles*=1.5;
 	}
 	// Win CE boost
+#ifndef VITA
 	if (mmu_enabled())
+#endif
 		blk->guest_cycles *= 1.5f;
 
 	//make sure we don't use wayy-too-many cycles
