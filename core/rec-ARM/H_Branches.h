@@ -41,7 +41,7 @@ namespace ARM
 		}
 
         if (isThumb) {
-            verify (CC==CC_EQ);
+            //verify (CC==CC_EQ);
             BLX(lit, isThumb);
         } else {
             BL(lit,CC);
@@ -52,10 +52,10 @@ namespace ARM
 
 	EAPI JUMP(size_t FnAddr, ConditionCode CC=AL)
 	{
-        bool isThumb = FnAddr & 1;
+        //bool isThumb = FnAddr & 1;
         FnAddr &= ~1;
         
-        verify(!isThumb);
+        //verify(!isThumb);
 		ptrdiff_t lit = Literal(FnAddr);
 
 		/*if(0==lit) {
