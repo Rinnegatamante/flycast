@@ -7,6 +7,8 @@
 #endif
 
 #ifdef VITA
+static int frame_reset_counter = 0;
+#define FRAME_RESET_NUM 3
 #include <vitasdk.h>
 extern uint16_t *gIndices;
 extern float *gVertexBuffer;
@@ -1263,8 +1265,11 @@ void retro_run (void)
 	   is_dupe = true;
 	   
 #ifdef VITA
-   gVertexBuffer = gVertexBufferPtr;
-   gIndices = gIndicesPtr;
+   frame_reset_counter = (frame_reset_counter + 1) % FRAME_RESET_NUM;
+   if (!frame_reset_counter) {
+      gVertexBuffer = gVertexBufferPtr;
+      gIndices = gIndicesPtr;
+   }
 #endif 
 }
 
