@@ -310,6 +310,10 @@ else ifeq ($(platform), vita)
 	CORE_DEFINES += -DLOW_END -DNO_MMU
 	
 	ifeq ($(smc),1)
+		CFLAGS += -DVITA_SAFE -DVITA_FAST_SMC
+	endif
+	
+	ifeq ($(smc),2)
 		CFLAGS += -DVITA_SAFE
 	endif
 

@@ -2228,7 +2228,7 @@ void ngen_Compile_arm(RuntimeBlockInfo* block,bool force_checks, bool reset, boo
 	//scheduler
 	if (force_checks)
 	{
-#ifdef VITA
+#ifdef VITA_FAST_SMC
 		s32 sz = 4;
 #else
 		s32 sz = block->sh4_code_size;
