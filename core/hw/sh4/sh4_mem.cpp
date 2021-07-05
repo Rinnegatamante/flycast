@@ -15,7 +15,7 @@
 
 #ifdef VITA
 extern "C"{
-	void *memcpy_neon(void *destination, const void *source, size_t num);
+	void *sceClibMemcpy(void *destination, const void *source, size_t num);
 };
 #endif
 
@@ -233,7 +233,7 @@ void WriteMemBlock_nommu_dma(u32 dst,u32 src,u32 size)
 	if (dst_ptr && src_ptr)
 	{
 #ifdef VITA
-		memcpy_neon((u8*)dst_ptr+(dst&dst_msk),(u8*)src_ptr+(src&src_msk),size);
+		sceClibMemcpy((u8*)dst_ptr+(dst&dst_msk),(u8*)src_ptr+(src&src_msk),size);
 #else
 		memcpy((u8*)dst_ptr+(dst&dst_msk),(u8*)src_ptr+(src&src_msk),size);
 #endif
@@ -260,7 +260,7 @@ void WriteMemBlock_nommu_ptr(u32 dst,u32* src,u32 size)
 	{
 		dst&=dst_msk;
 #ifdef VITA
-		memcpy_neon((u8*)dst_ptr+dst,src,size);
+		sceClibMemcpy((u8*)dst_ptr+dst,src,size);
 #else
 		memcpy((u8*)dst_ptr+dst,src,size);
 #endif
@@ -298,7 +298,7 @@ void WriteMemBlock_nommu_sq(u32 dst,u32* src)
 	{
 		dst&=dst_msk;
 #ifdef VITA
-		memcpy_neon((u8*)dst_ptr+dst,src,32);
+		sceClibMemcpy((u8*)dst_ptr+dst,src,32);
 #else
 		memcpy((u8*)dst_ptr+dst,src,32);
 #endif

@@ -16,7 +16,7 @@
 
 #ifdef VITA
 extern "C"{
-	void *memcpy_neon(void *destination, const void *source, size_t num);
+	void *sceClibMemcpy(void *destination, const void *source, size_t num);
 };
 #endif
 
@@ -232,7 +232,7 @@ void interrupts_init(void)
 
 	verify(sizeof(InterruptSourceList)==sizeof(InterruptSourceList2));
 #ifdef VITA
-	memcpy_neon(InterruptSourceList,InterruptSourceList2,sizeof(InterruptSourceList));
+	sceClibMemcpy(InterruptSourceList,InterruptSourceList2,sizeof(InterruptSourceList));
 #else
 	memcpy(InterruptSourceList,InterruptSourceList2,sizeof(InterruptSourceList));
 #endif

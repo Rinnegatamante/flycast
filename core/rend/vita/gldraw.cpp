@@ -455,8 +455,8 @@ void DrawFramebuffer(float w, float h)
 
 	gVertexBuffer += vtx_incr;
 	gIndices += idx_incr;
-	memcpy_neon(gVertexBuffer, vertices, sizeof(vertices));
-	memcpy_neon(gIndices, indices, sizeof(indices));
+	sceClibMemcpy(gVertexBuffer, vertices, sizeof(vertices));
+	sceClibMemcpy(gIndices, indices, sizeof(indices));
 	vtx_incr = sizeof(vertices) / sizeof(float);
 	idx_incr = sizeof(indices) / sizeof(uint16_t);
 	SetupMainVBO();
@@ -589,8 +589,8 @@ void DrawVmuTexture(u8 vmu_screen_number, bool draw_additional_primitives)
 
 		gVertexBuffer += vtx_incr;
 		gIndices += idx_incr;
-		memcpy_neon(gVertexBuffer, vertices, sizeof(vertices));
-		memcpy_neon(gIndices, indices, sizeof(indices));
+		sceClibMemcpy(gVertexBuffer, vertices, sizeof(vertices));
+		sceClibMemcpy(gIndices, indices, sizeof(indices));
 		vtx_incr = sizeof(vertices) / sizeof(float);
 		idx_incr = sizeof(indices) / sizeof(uint16_t);
 		SetupMainVBO();
@@ -687,8 +687,8 @@ void DrawGunCrosshair(u8 port, bool draw_additional_primitives)
 		
 		gVertexBuffer += vtx_incr;
 		gIndices += idx_incr;
-		memcpy_neon(gVertexBuffer, vertices, sizeof(vertices));
-		memcpy_neon(gIndices, indices, sizeof(indices));
+		sceClibMemcpy(gVertexBuffer, vertices, sizeof(vertices));
+		sceClibMemcpy(gIndices, indices, sizeof(indices));
 		vtx_incr = sizeof(vertices) / sizeof(float);
 		idx_incr = sizeof(indices) / sizeof(uint16_t);
 		SetupMainVBO();

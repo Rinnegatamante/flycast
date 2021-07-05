@@ -9,6 +9,7 @@
 #include "hw/pvr/Renderer_if.h"
 
 #ifdef VITA
+#include <vitasdk.h>
 #include <vitaGL.h>
 #endif
 

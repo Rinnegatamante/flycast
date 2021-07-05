@@ -19,6 +19,12 @@
 
 #include "hw/sh4/sh4_opcode.h"
 
+#ifdef VITA
+extern "C"{
+	void *sceClibMemcpy(void *destination, const void *source, size_t num);
+};
+#endif
+
 #define GetN(str) ((str>>8) & 0xf)
 #define GetM(str) ((str>>4) & 0xf)
 #define GetImm4(str) ((str>>0) & 0xf)
@@ -51,12 +57,6 @@
 #define WriteMemBOU32(addr,offset,data) WriteMemU32(addr+offset,data)
 #define WriteMemBOU16(addr,offset,data) WriteMemU16(addr+offset,data)
 #define WriteMemBOU8(addr,offset,data)  WriteMemU8(addr+offset,data)
-
-#ifdef VITA
-extern "C"{
-	void *memcpy_neon(void *destination, const void *source, size_t num);
-};
-#endif
 
 // 0xxx
 void cpu_iNimp(u32 op, const char* info)
@@ -1247,7 +1247,7 @@ extern "C" void DYNACALL do_sqw_nommu_area_3_nonvmem(u32 dst,u8* sqb)
 {
 	u8* pmem = mem_b.data;
 #ifdef VITA
-	memcpy_neon((u64*)&pmem[dst&(RAM_MASK-0x1F)],(u64*)&sqb[dst & 0x20],32);
+	sceClibMemcpy((u64*)&pmem[dst&(RAM_MASK-0x1F)],(u64*)&sqb[dst & 0x20],32);
 #else
 	memcpy((u64*)&pmem[dst&(RAM_MASK-0x1F)],(u64*)&sqb[dst & 0x20],32);
 #endif
